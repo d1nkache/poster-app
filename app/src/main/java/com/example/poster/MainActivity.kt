@@ -8,13 +8,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.poster.presentation.auth.otp.VerifyEmailScreen
 import com.example.poster.presentation.auth.register.RegisterScreen
 import com.example.poster.presentation.auth.signin.SignInScreen
 import com.example.poster.presentation.chats.ChatListScreen
+import com.example.poster.presentation.chats.ChatPreviewUi
 import com.example.poster.presentation.chats.sampleChatPreviews
+import com.example.poster.presentation.messages.MessageUi
+import com.example.poster.presentation.messages.MessagesScreen
+import com.example.poster.presentation.messages.sampleMessages
+import com.example.poster.presentation.profile.ProfileScreen
 import com.example.poster.ui.theme.PosterTheme
 
 class MainActivity : ComponentActivity() {
@@ -55,18 +61,21 @@ class MainActivity : ComponentActivity() {
                 var verificationEmail by rememberSaveable {
                     mutableStateOf("user@mail.ru")
                 }
+                var selectedChat by remember {
+                    mutableStateOf<ChatPreviewUi?>(null)
+                }
+                var messages by remember {
+                    mutableStateOf(sampleMessages)
+                }
 
                 LaunchedEffect(Unit) {
                     Log.d(TAG, "Compose content loaded")
                     Log.d(TAG, "Auth placeholder check started")
                     Log.d(TAG, "isAuthorized = $isAuthorized")
-                    Log.d(TAG, "Initial screen = $currentScreen")
+                }
 
-                    if (isAuthorized) {
-                        Log.d(TAG, "User is authorized, opening ChatListScreen")
-                    } else {
-                        Log.d(TAG, "User is not authorized, opening auth screens")
-                    }
+                LaunchedEffect(currentScreen) {
+                    Log.d(TAG, "Current screen = $currentScreen")
                 }
 
                 when (currentScreen) {
@@ -119,7 +128,8 @@ class MainActivity : ComponentActivity() {
                             isSetupRequired = true,
                             onChatClick = { chat ->
                                 Log.d(TAG, "Chat clicked: id=${chat.id}, name=${chat.name}")
-                                // TODO: navigate to MessagesScreen(chat.id)
+                                selectedChat = chat
+                                currentScreen = AppScreen.MESSAGES
                             },
                             onSetupTokenClick = {
                                 Log.d(TAG, "Setup token clicked")
@@ -128,6 +138,51 @@ class MainActivity : ComponentActivity() {
                             onSettingsClick = {
                                 Log.d(TAG, "Settings clicked")
                                 // TODO: navigate to SettingsScreen
+                            },
+                        )
+                    }
+
+                    AppScreen.MESSAGES -> {
+                        val chat = selectedChat ?: sampleChatPreviews.first()
+
+                        MessagesScreen(
+                            contactName = chat.name,
+                            contactInitials = chat.initials,
+                            messages = messages,
+                            onBackClick = {
+                                Log.d(TAG, "Back from Messages")
+                                currentScreen = AppScreen.CHATS
+                            },
+                            onProfileClick = {
+                                Log.d(TAG, "Open Profile from Messages")
+                                currentScreen = AppScreen.PROFILE
+                            },
+                            onMoreClick = {
+                                Log.d(TAG, "More clicked in Messages")
+                            },
+                            onSendClick = { text ->
+                                Log.d(TAG, "Send message: $text")
+                                messages = messages + MessageUi(
+                                    id = System.currentTimeMillis().toString(),
+                                    text = text,
+                                    time = "Now",
+                                    isMine = true,
+                                )
+                            },
+                        )
+                    }
+
+                    AppScreen.PROFILE -> {
+                        val chat = selectedChat ?: sampleChatPreviews.first()
+
+                        ProfileScreen(
+                            initials = chat.initials,
+                            name = chat.name,
+                            username = "@${chat.name.lowercase().replace(" ", ".")}",
+                            bio = "Product designer passionate about creating beautiful and functional user experiences.",
+                            onBackClick = {
+                                Log.d(TAG, "Back from Profile")
+                                currentScreen = AppScreen.MESSAGES
                             },
                         )
                     }
@@ -167,4 +222,6 @@ private enum class AppScreen {
     SIGN_UP,
     VERIFY_EMAIL,
     CHATS,
+    MESSAGES,
+    PROFILE,
 }
