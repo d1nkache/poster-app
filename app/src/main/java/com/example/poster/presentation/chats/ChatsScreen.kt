@@ -16,6 +16,7 @@ fun ChatsScreen(modifier: Modifier = Modifier) {
             onChatClick = {},
             onSetupTokenClick = {},
             onSettingsClick = {},
+            onProfileClick = {},
         )
     }
 }

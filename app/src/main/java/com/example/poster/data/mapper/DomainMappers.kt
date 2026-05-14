@@ -11,6 +11,7 @@ import com.example.poster.domain.model.Attachment
 import com.example.poster.domain.model.AuthSession
 import com.example.poster.domain.model.Chat
 import com.example.poster.domain.model.Message
+import com.example.poster.domain.model.MessageStatus
 import com.example.poster.domain.model.Profile
 import com.example.poster.domain.model.User
 
@@ -24,10 +25,13 @@ fun RemoteUserDto.toDomain(): User {
 
 fun RemoteProfileDto.toDomain(): Profile {
     return Profile(
-        user = user.toDomain(),
+        id = user.id,
+        name = user.displayName,
+        username = user.username,
+        email = "${user.username}@example.com",
         bio = bio,
         avatarUrl = avatarUrl,
-        status = status,
+        isOnline = status == "online",
     )
 }
 
@@ -35,8 +39,14 @@ fun RemoteChatDto.toDomain(): Chat {
     return Chat(
         id = id,
         title = title,
-        memberIds = memberIds,
-        lastMessagePreview = lastMessagePreview,
+        initials = title
+            .split(" ")
+            .filter { it.isNotBlank() }
+            .take(2)
+            .joinToString(separator = "") { it.first().uppercase() }
+            .ifBlank { "P" },
+        lastMessage = lastMessagePreview,
+        lastMessageTime = "Now",
         unreadCount = unreadCount,
     )
 }
@@ -54,10 +64,11 @@ fun RemoteMessageDto.toDomain(): Message {
     return Message(
         id = id,
         chatId = chatId,
-        senderId = senderId,
         text = text,
+        time = "Now",
+        isMine = senderId == "user-1",
+        status = MessageStatus.SENT,
         attachments = attachments.map(RemoteAttachmentDto::toDomain),
-        timestampMillis = timestampMillis,
     )
 }
 

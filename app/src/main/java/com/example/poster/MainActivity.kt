@@ -20,6 +20,7 @@ import com.example.poster.presentation.chats.sampleChatPreviews
 import com.example.poster.presentation.messages.MessageUi
 import com.example.poster.presentation.messages.MessagesScreen
 import com.example.poster.presentation.messages.sampleMessages
+import com.example.poster.presentation.profile.MyProfileScreen
 import com.example.poster.presentation.profile.ProfileScreen
 import com.example.poster.presentation.settings.AccessTokenSettingsScreen
 import com.example.poster.presentation.settings.SettingsScreen
@@ -71,6 +72,9 @@ class MainActivity : ComponentActivity() {
                 }
                 var accessTokenBackScreen by rememberSaveable {
                     mutableStateOf(AppScreen.CHATS)
+                }
+                var myProfileBackScreen by rememberSaveable {
+                    mutableStateOf(AppScreen.SETTINGS)
                 }
 
                 LaunchedEffect(Unit) {
@@ -145,6 +149,11 @@ class MainActivity : ComponentActivity() {
                                 Log.d(TAG, "Settings clicked")
                                 currentScreen = AppScreen.SETTINGS
                             },
+                            onProfileClick = {
+                                Log.d(TAG, "Open MyProfile from Chats")
+                                myProfileBackScreen = AppScreen.CHATS
+                                currentScreen = AppScreen.MY_PROFILE
+                            },
                         )
                     }
 
@@ -173,9 +182,39 @@ class MainActivity : ComponentActivity() {
                             },
                             onProfilePhotoClick = {
                                 Log.d(TAG, "Profile photo clicked")
+                                myProfileBackScreen = AppScreen.SETTINGS
+                                currentScreen = AppScreen.MY_PROFILE
                             },
                             onAccountItemClick = { itemId ->
                                 Log.d(TAG, "Account item clicked: $itemId")
+                                if (itemId == "name" || itemId == "username" || itemId == "bio") {
+                                    myProfileBackScreen = AppScreen.SETTINGS
+                                    currentScreen = AppScreen.MY_PROFILE
+                                }
+                            },
+                        )
+                    }
+
+                    AppScreen.MY_PROFILE -> {
+                        MyProfileScreen(
+                            name = "Your Name",
+                            username = "@your.username",
+                            bio = "Hey there! I'm using Poster.",
+                            onBackClick = {
+                                Log.d(TAG, "Back from MyProfile")
+                                currentScreen = myProfileBackScreen
+                            },
+                            onAvatarClick = {
+                                Log.d(TAG, "Avatar clicked from MyProfile")
+                            },
+                            onNameChange = { name ->
+                                Log.d(TAG, "Name changed placeholder: $name")
+                            },
+                            onUsernameChange = { username ->
+                                Log.d(TAG, "Username changed placeholder: $username")
+                            },
+                            onBioChange = { bio ->
+                                Log.d(TAG, "Bio changed placeholder, length=${bio.length}")
                             },
                         )
                     }
@@ -288,6 +327,7 @@ private enum class AppScreen {
     VERIFY_EMAIL,
     CHATS,
     SETTINGS,
+    MY_PROFILE,
     ACCESS_TOKEN_SETTINGS,
     MESSAGES,
     PROFILE,

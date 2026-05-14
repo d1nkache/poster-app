@@ -169,13 +169,13 @@ class StubPosterRemoteDataSource : PosterRemoteDataSource {
     override suspend fun updateProfile(profile: Profile): RemoteProfileDto {
         return RemoteProfileDto(
             user = RemoteUserDto(
-                id = profile.user.id,
-                username = profile.user.username,
-                displayName = profile.user.displayName,
+                id = profile.id,
+                username = profile.username,
+                displayName = profile.name,
             ),
             bio = profile.bio,
             avatarUrl = profile.avatarUrl,
-            status = profile.status,
+            status = if (profile.isOnline) "online" else "offline",
         )
     }
 }

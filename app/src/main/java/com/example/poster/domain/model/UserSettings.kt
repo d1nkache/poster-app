@@ -1,11 +1,11 @@
 package com.example.poster.domain.model
 
-data class Profile(
-    val id: String,
+data class UserSettings(
     val name: String,
     val username: String,
     val email: String,
+    val birthday: String,
     val bio: String,
-    val avatarUrl: String?,
-    val isOnline: Boolean,
+    val language: String,
+    val hasMailAccessToken: Boolean,
 )

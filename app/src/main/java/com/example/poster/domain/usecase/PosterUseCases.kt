@@ -15,7 +15,9 @@ class LoginUseCase(
     private val authRepository: AuthRepository,
 ) {
     suspend operator fun invoke(identifier: String, password: String): AuthSession {
-        return authRepository.login(identifier, password)
+        authRepository.signIn(identifier, password).getOrThrow()
+        return authRepository.getActiveSession()
+            ?: throw IllegalStateException("No active session after login")
     }
 }
 
@@ -23,7 +25,9 @@ class RegisterUseCase(
     private val authRepository: AuthRepository,
 ) {
     suspend operator fun invoke(identifier: String, password: String, displayName: String): AuthSession {
-        return authRepository.register(identifier, password, displayName)
+        authRepository.signUp(displayName, identifier, password).getOrThrow()
+        return authRepository.getActiveSession()
+            ?: throw IllegalStateException("No active session after registration")
     }
 }
 
@@ -31,7 +35,9 @@ class VerifyOtpUseCase(
     private val authRepository: AuthRepository,
 ) {
     suspend operator fun invoke(code: String): AuthSession {
-        return authRepository.verifyOtp(code)
+        authRepository.verifyOtp(email = "", code = code).getOrThrow()
+        return authRepository.getActiveSession()
+            ?: throw IllegalStateException("No active session after OTP verification")
     }
 }
 
@@ -55,7 +61,7 @@ class SendMessageUseCase(
     private val messageRepository: MessageRepository,
 ) {
     suspend operator fun invoke(chatId: String, text: String, attachments: List<Attachment> = emptyList()) {
-        messageRepository.sendMessage(chatId, text, attachments)
+        messageRepository.sendMessage(chatId, text, attachments).getOrThrow()
     }
 }
 
@@ -63,7 +69,7 @@ class GetProfileUseCase(
     private val profileRepository: ProfileRepository,
 ) {
     suspend operator fun invoke(userId: String): Profile {
-        return profileRepository.getProfile(userId)
+        return profileRepository.getUserProfile(userId).getOrThrow()
     }
 }
 
@@ -71,6 +77,6 @@ class UpdateProfileUseCase(
     private val profileRepository: ProfileRepository,
 ) {
     suspend operator fun invoke(profile: Profile): Profile {
-        return profileRepository.updateProfile(profile)
+        return profileRepository.updateBio(profile.bio).getOrThrow()
     }
 }

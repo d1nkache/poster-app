@@ -15,23 +15,37 @@ class MessageRepositoryImpl(
 ) : MessageRepository {
     private val messagesByChat = mutableMapOf<String, MutableStateFlow<List<Message>>>()
 
+    override suspend fun getMessages(chatId: String): Result<List<Message>> {
+        val messages = remoteDataSource
+            .getMessages(chatId)
+            .map { it.toDomain() }
+        getOrCreateFlow(chatId).value = messages
+        return Result.success(messages)
+    }
+
     override fun observeMessages(chatId: String): Flow<List<Message>> {
         return getOrCreateFlow(chatId).asStateFlow()
     }
 
-    override suspend fun refreshMessages(chatId: String) {
-        getOrCreateFlow(chatId).value = remoteDataSource
-            .getMessages(chatId)
-            .map { it.toDomain() }
-    }
-
-    override suspend fun sendMessage(chatId: String, text: String, attachments: List<Attachment>) {
+    override suspend fun sendMessage(chatId: String, text: String, attachments: List<Attachment>): Result<Message> {
         val createdMessage = remoteDataSource
             .sendMessage(chatId, text, attachments.map { it.toRemote() })
             .toDomain()
 
         val currentMessages = getOrCreateFlow(chatId).value
         getOrCreateFlow(chatId).value = currentMessages + createdMessage
+        return Result.success(createdMessage)
+    }
+
+    override suspend fun markMessageAsRead(messageId: String): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteMessage(messageId: String): Result<Unit> {
+        messagesByChat.forEach { (_, flow) ->
+            flow.value = flow.value.filterNot { it.id == messageId }
+        }
+        return Result.success(Unit)
     }
 
     private fun getOrCreateFlow(chatId: String): MutableStateFlow<List<Message>> {

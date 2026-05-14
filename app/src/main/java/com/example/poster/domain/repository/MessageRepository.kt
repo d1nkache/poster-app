@@ -5,7 +5,9 @@ import com.example.poster.domain.model.Message
 import kotlinx.coroutines.flow.Flow
 
 interface MessageRepository {
+    suspend fun getMessages(chatId: String): Result<List<Message>>
     fun observeMessages(chatId: String): Flow<List<Message>>
-    suspend fun refreshMessages(chatId: String)
-    suspend fun sendMessage(chatId: String, text: String, attachments: List<Attachment> = emptyList())
+    suspend fun sendMessage(chatId: String, text: String, attachments: List<Attachment> = emptyList()): Result<Message>
+    suspend fun markMessageAsRead(messageId: String): Result<Unit>
+    suspend fun deleteMessage(messageId: String): Result<Unit>
 }
