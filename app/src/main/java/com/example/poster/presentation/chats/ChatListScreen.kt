@@ -168,6 +168,7 @@ fun ChatListScreen(
     onChatClick: (ChatPreviewUi) -> Unit,
     onSetupTokenClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -203,6 +204,7 @@ fun ChatListScreen(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
                 onSettingsClick = onSettingsClick,
+                onProfileClick = onProfileClick,
             )
 
             LazyColumn(
@@ -245,6 +247,7 @@ private fun ChatTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -263,6 +266,7 @@ private fun ChatTopBar(
                 text = "",
                 size = 40.dp,
                 showPersonIcon = true,
+                modifier = Modifier.clickable { onProfileClick() },
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -513,9 +517,10 @@ private fun AvatarCircle(
     text: String,
     size: Dp,
     showPersonIcon: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(size)
             .background(
                 brush = Brush.linearGradient(
@@ -555,5 +560,6 @@ private fun ChatListScreenPreview() {
         onChatClick = {},
         onSetupTokenClick = {},
         onSettingsClick = {},
+        onProfileClick = {},
     )
 }
