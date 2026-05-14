@@ -107,6 +107,58 @@ internal val sampleChatPreviews = listOf(
         lastMessage = "I'll send the files",
         time = "3 days ago",
     ),
+    ChatPreviewUi(
+        id = "6",
+        initials = "FK",
+        name = "Frank King",
+        lastMessage = "SMTP sync completed",
+        time = "Monday",
+    ),
+    ChatPreviewUi(
+        id = "7",
+        initials = "GL",
+        name = "Grace Lee",
+        lastMessage = "Can we review the IMAP logs?",
+        time = "Sunday",
+        unreadCount = 4,
+    ),
+    ChatPreviewUi(
+        id = "8",
+        initials = "HM",
+        name = "Henry Miller",
+        lastMessage = "Token settings look correct",
+        time = "Saturday",
+    ),
+    ChatPreviewUi(
+        id = "9",
+        initials = "IN",
+        name = "Ivy Nelson",
+        lastMessage = "New message arrived via mail",
+        time = "Friday",
+        unreadCount = 3,
+    ),
+    ChatPreviewUi(
+        id = "10",
+        initials = "JO",
+        name = "Jack Owens",
+        lastMessage = "I'll check the server response",
+        time = "Friday",
+    ),
+    ChatPreviewUi(
+        id = "11",
+        initials = "KP",
+        name = "Kate Parker",
+        lastMessage = "Thanks, it works now",
+        time = "Thursday",
+    ),
+    ChatPreviewUi(
+        id = "12",
+        initials = "LR",
+        name = "Liam Reed",
+        lastMessage = "Let's deploy the Ktor endpoint",
+        time = "Wednesday",
+        unreadCount = 1,
+    ),
 )
 
 @Composable
@@ -155,7 +207,8 @@ fun ChatListScreen(
 
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .navigationBarsPadding(),
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {

@@ -21,6 +21,8 @@ import com.example.poster.presentation.messages.MessageUi
 import com.example.poster.presentation.messages.MessagesScreen
 import com.example.poster.presentation.messages.sampleMessages
 import com.example.poster.presentation.profile.ProfileScreen
+import com.example.poster.presentation.settings.AccessTokenSettingsScreen
+import com.example.poster.presentation.settings.SettingsScreen
 import com.example.poster.ui.theme.PosterTheme
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,9 @@ class MainActivity : ComponentActivity() {
                 }
                 var messages by remember {
                     mutableStateOf(sampleMessages)
+                }
+                var accessTokenBackScreen by rememberSaveable {
+                    mutableStateOf(AppScreen.CHATS)
                 }
 
                 LaunchedEffect(Unit) {
@@ -133,11 +138,71 @@ class MainActivity : ComponentActivity() {
                             },
                             onSetupTokenClick = {
                                 Log.d(TAG, "Setup token clicked")
-                                // TODO: navigate to mail access token setup
+                                accessTokenBackScreen = AppScreen.CHATS
+                                currentScreen = AppScreen.ACCESS_TOKEN_SETTINGS
                             },
                             onSettingsClick = {
                                 Log.d(TAG, "Settings clicked")
-                                // TODO: navigate to SettingsScreen
+                                currentScreen = AppScreen.SETTINGS
+                            },
+                        )
+                    }
+
+                    AppScreen.SETTINGS -> {
+                        SettingsScreen(
+                            name = "Your Name",
+                            username = "@your.username",
+                            email = "your.email@example.com",
+                            birthday = "January 1, 2000",
+                            bio = "Hey there! I'm using Poster.",
+                            accessTokenStatus = "Configured",
+                            onBackClick = {
+                                Log.d(TAG, "Back from Settings")
+                                currentScreen = AppScreen.CHATS
+                            },
+                            onAccessTokenClick = {
+                                Log.d(TAG, "Open Access Token Settings")
+                                accessTokenBackScreen = AppScreen.SETTINGS
+                                currentScreen = AppScreen.ACCESS_TOKEN_SETTINGS
+                            },
+                            onPrivacyClick = {
+                                Log.d(TAG, "Privacy & Security clicked")
+                            },
+                            onLanguageClick = {
+                                Log.d(TAG, "Language clicked")
+                            },
+                            onProfilePhotoClick = {
+                                Log.d(TAG, "Profile photo clicked")
+                            },
+                            onAccountItemClick = { itemId ->
+                                Log.d(TAG, "Account item clicked: $itemId")
+                            },
+                        )
+                    }
+
+                    AppScreen.ACCESS_TOKEN_SETTINGS -> {
+                        AccessTokenSettingsScreen(
+                            initialToken = "",
+                            onBackClick = {
+                                Log.d(TAG, "Back from AccessTokenSettings")
+                                currentScreen = accessTokenBackScreen
+                            },
+                            onSaveTokenClick = { token ->
+                                Log.d(TAG, "Access token saved placeholder, length=${token.length}")
+                                /*
+                                 * PLACEHOLDER:
+                                 * Later this should call SaveMailAccessTokenUseCase(token),
+                                 * persist through encrypted storage, and refresh hasMailAccessToken.
+                                 */
+                                currentScreen = accessTokenBackScreen
+                            },
+                            onHowToGetTokenClick = {
+                                Log.d(TAG, "How to get access token clicked")
+                                /*
+                                 * PLACEHOLDER:
+                                 * Later this can open a bottom sheet or web guide for provider-specific
+                                 * app passwords: Gmail, Yandex, Mail.ru, and others.
+                                 */
                             },
                         )
                     }
@@ -222,6 +287,8 @@ private enum class AppScreen {
     SIGN_UP,
     VERIFY_EMAIL,
     CHATS,
+    SETTINGS,
+    ACCESS_TOKEN_SETTINGS,
     MESSAGES,
     PROFILE,
 }
