@@ -3,8 +3,8 @@ package com.example.poster.presentation.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,10 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items as lazyItems
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,14 +36,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.poster.core.media.RemoteImageConfig
 import com.example.poster.domain.model.Attachment
 import com.example.poster.domain.model.AttachmentType
 
@@ -63,6 +69,13 @@ enum class ProfileTab {
     FILES,
 }
 
+data class ProfileFileUi(
+    val id: String,
+    val name: String,
+    val size: String,
+    val date: String,
+)
+
 @Composable
 fun ProfileScreen(
     initials: String = "AJ",
@@ -70,16 +83,12 @@ fun ProfileScreen(
     username: String = "@alice.johnson",
     bio: String = "Product designer passionate about creating beautiful and functional user experiences.",
     attachments: List<Attachment> = emptyList(),
+    files: List<ProfileFileUi> = emptyList(),
     onBackClick: () -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(ProfileTab.MEDIA) }
     val mediaAttachments = remember(attachments) {
         attachments.filter { attachment ->
-            attachment.type == AttachmentType.IMAGE || attachment.type == AttachmentType.VIDEO
-        }
-    }
-    val fileAttachments = remember(attachments) {
-        attachments.filterNot { attachment ->
             attachment.type == AttachmentType.IMAGE || attachment.type == AttachmentType.VIDEO
         }
     }
@@ -190,7 +199,12 @@ fun ProfileScreen(
 
         when (selectedTab) {
             ProfileTab.MEDIA -> MediaGrid(attachments = mediaAttachments)
-            ProfileTab.FILES -> FilesList(attachments = fileAttachments)
+            ProfileTab.FILES -> FilesList(
+                files = files,
+                onFileClick = { file ->
+                    // TODO: open/download file
+                },
+            )
         }
     }
 }
@@ -351,44 +365,77 @@ private fun MediaGrid(attachments: List<Attachment>) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(attachments, key = { it.id }) { attachment ->
+        gridItems(attachments, key = { it.id }) { attachment ->
+            val context = LocalContext.current
+            val imageModel = remember(context, attachment.localUri, attachment.remoteUrl) {
+                attachment.localUri ?: attachment.remoteUrl?.let { remoteUrl ->
+                    RemoteImageConfig.buildImageModel(
+                        context = context,
+                        remoteUrl = remoteUrl,
+                    )
+                }
+            }
+            val tileShape = RoundedCornerShape(7.dp)
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(132.dp)
-                    .background(
-                        color = PosterSurface,
-                        shape = RoundedCornerShape(7.dp),
-                    )
+                    .clip(tileShape)
+                    .background(color = PosterSurface, shape = tileShape)
                     .border(
                         width = 0.5.dp,
                         color = PosterDivider,
-                        shape = RoundedCornerShape(7.dp),
+                        shape = tileShape,
                     ),
-                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Image,
-                    contentDescription = null,
-                    tint = PosterTextMuted,
-                    modifier = Modifier.size(32.dp),
-                )
-                Text(
-                    text = attachment.fileName,
-                    color = PosterTextSecondary,
-                    fontSize = 11.sp,
+                if (imageModel != null) {
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = attachment.fileName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Image,
+                            contentDescription = null,
+                            tint = PosterTextMuted,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+                }
+
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.45f))
                         .padding(8.dp),
-                )
+                ) {
+                    Text(
+                        text = attachment.fileName,
+                        color = PosterTextPrimary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FilesList(attachments: List<Attachment>) {
-    if (attachments.isEmpty()) {
+private fun FilesList(
+    files: List<ProfileFileUi>,
+    onFileClick: (ProfileFileUi) -> Unit,
+) {
+    if (files.isEmpty()) {
         EmptyProfileTab(
             icon = {
                 Icon(
@@ -405,65 +452,88 @@ private fun FilesList(attachments: List<Attachment>) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(
+            start = 4.dp,
+            end = 4.dp,
+            top = 14.dp,
+            bottom = 24.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        lazyItems(attachments, key = { it.id }) { attachment ->
-            FileAttachmentRow(attachment = attachment)
+        items(
+            items = files,
+            key = { it.id },
+        ) { file ->
+            ProfileFileRow(
+                file = file,
+                onClick = { onFileClick(file) },
+            )
         }
     }
 }
 
 @Composable
-private fun FileAttachmentRow(attachment: Attachment) {
+private fun ProfileFileRow(
+    file: ProfileFileUi,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(80.dp)
             .background(
                 color = PosterSurface,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
             )
             .border(
                 width = 0.5.dp,
                 color = PosterDivider,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
             )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clickable { onClick() }
+            .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .background(
-                    color = PosterStroke.copy(alpha = 0.65f),
-                    shape = CircleShape,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            PosterPrimary,
+                            PosterPrimaryDark,
+                        ),
+                    ),
+                    shape = RoundedCornerShape(9.dp),
                 ),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Description,
                 contentDescription = null,
-                tint = Color(0xFFB7BCFF),
+                tint = Color.White,
                 modifier = Modifier.size(22.dp),
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = attachment.fileName,
+                text = file.name,
                 color = PosterTextPrimary,
-                fontSize = 15.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             Text(
-                text = attachment.mimeType.ifBlank { "file" },
+                text = "${file.size} • ${file.date}",
                 color = PosterTextMuted,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
             )
         }
     }

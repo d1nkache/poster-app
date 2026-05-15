@@ -36,10 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +49,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.poster.domain.model.Chat
 
 private val PosterBackground = Color(0xFF030306)
 private val PosterTopBar = Color(0xFF101014)
@@ -69,102 +73,22 @@ data class ChatPreviewUi(
     val unreadCount: Int = 0,
 )
 
-internal val sampleChatPreviews = listOf(
-    ChatPreviewUi(
-        id = "1",
-        initials = "AJ",
-        name = "Alice Johnson",
-        lastMessage = "See you tomorrow!",
-        time = "10:30 AM",
-        unreadCount = 2,
-    ),
-    ChatPreviewUi(
-        id = "2",
-        initials = "BS",
-        name = "Bob Smith",
-        lastMessage = "Thanks for the update",
-        time = "Yesterday",
-    ),
-    ChatPreviewUi(
-        id = "3",
-        initials = "CW",
-        name = "Carol White",
-        lastMessage = "Meeting at 3 PM?",
-        time = "Yesterday",
-        unreadCount = 1,
-    ),
-    ChatPreviewUi(
-        id = "4",
-        initials = "DB",
-        name = "David Brown",
-        lastMessage = "Perfect, sounds good!",
-        time = "2 days ago",
-    ),
-    ChatPreviewUi(
-        id = "5",
-        initials = "ED",
-        name = "Emma Davis",
-        lastMessage = "I'll send the files",
-        time = "3 days ago",
-    ),
-    ChatPreviewUi(
-        id = "6",
-        initials = "FK",
-        name = "Frank King",
-        lastMessage = "SMTP sync completed",
-        time = "Monday",
-    ),
-    ChatPreviewUi(
-        id = "7",
-        initials = "GL",
-        name = "Grace Lee",
-        lastMessage = "Can we review the IMAP logs?",
-        time = "Sunday",
-        unreadCount = 4,
-    ),
-    ChatPreviewUi(
-        id = "8",
-        initials = "HM",
-        name = "Henry Miller",
-        lastMessage = "Token settings look correct",
-        time = "Saturday",
-    ),
-    ChatPreviewUi(
-        id = "9",
-        initials = "IN",
-        name = "Ivy Nelson",
-        lastMessage = "New message arrived via mail",
-        time = "Friday",
-        unreadCount = 3,
-    ),
-    ChatPreviewUi(
-        id = "10",
-        initials = "JO",
-        name = "Jack Owens",
-        lastMessage = "I'll check the server response",
-        time = "Friday",
-    ),
-    ChatPreviewUi(
-        id = "11",
-        initials = "KP",
-        name = "Kate Parker",
-        lastMessage = "Thanks, it works now",
-        time = "Thursday",
-    ),
-    ChatPreviewUi(
-        id = "12",
-        initials = "LR",
-        name = "Liam Reed",
-        lastMessage = "Let's deploy the Ktor endpoint",
-        time = "Wednesday",
-        unreadCount = 1,
-    ),
-)
+fun Chat.toChatPreviewUi(): ChatPreviewUi {
+    return ChatPreviewUi(
+        id = id,
+        initials = initials,
+        name = title,
+        lastMessage = lastMessage,
+        time = lastMessageTime,
+        unreadCount = unreadCount,
+    )
+}
 
 @Composable
 fun ChatListScreen(
     chats: List<ChatPreviewUi>,
     isSetupRequired: Boolean,
+    profileAvatarUrl: String? = null,
     hasMailAccessToken: Boolean = !isSetupRequired,
     onChatClick: (ChatPreviewUi) -> Unit,
     onSetupTokenClick: () -> Unit,
@@ -206,6 +130,7 @@ fun ChatListScreen(
                 onSearchQueryChange = { searchQuery = it },
                 onSettingsClick = onSettingsClick,
                 onProfileClick = onProfileClick,
+                profileAvatarUrl = profileAvatarUrl,
             )
 
             LazyColumn(
@@ -296,6 +221,7 @@ private fun ChatTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSettingsClick: () -> Unit,
     onProfileClick: () -> Unit,
+    profileAvatarUrl: String?,
 ) {
     Column(
         modifier = Modifier
@@ -314,6 +240,7 @@ private fun ChatTopBar(
                 text = "",
                 size = 40.dp,
                 showPersonIcon = true,
+                imageUrl = profileAvatarUrl,
                 modifier = Modifier.clickable { onProfileClick() },
             )
 
@@ -570,6 +497,7 @@ private fun AvatarCircle(
     text: String,
     size: Dp,
     showPersonIcon: Boolean = false,
+    imageUrl: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -586,7 +514,16 @@ private fun AvatarCircle(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (showPersonIcon) {
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+            )
+        } else if (showPersonIcon) {
             Icon(
                 imageVector = Icons.Outlined.Person,
                 contentDescription = null,
@@ -608,7 +545,7 @@ private fun AvatarCircle(
 @Composable
 private fun ChatListScreenPreview() {
     ChatListScreen(
-        chats = sampleChatPreviews,
+        chats = emptyList(),
         isSetupRequired = true,
         hasMailAccessToken = false,
         onChatClick = {},

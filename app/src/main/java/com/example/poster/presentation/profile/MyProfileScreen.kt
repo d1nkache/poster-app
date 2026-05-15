@@ -32,16 +32,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 private val PosterBackground = Color(0xFF030306)
 private val PosterTopBar = Color(0xFF101014)
@@ -59,15 +62,16 @@ fun MyProfileScreen(
     name: String = "Your Name",
     username: String = "@your.username",
     bio: String = "Hey there! I'm using Poster.",
+    avatarUrl: String? = null,
     onBackClick: () -> Unit = {},
     onAvatarClick: () -> Unit = {},
     onNameChange: (String) -> Unit = {},
     onUsernameChange: (String) -> Unit = {},
     onBioChange: (String) -> Unit = {},
 ) {
-    var nameValue by remember { mutableStateOf(name) }
-    var usernameValue by remember { mutableStateOf(username) }
-    var bioValue by remember { mutableStateOf(bio) }
+    var nameValue by remember(name) { mutableStateOf(name) }
+    var usernameValue by remember(username) { mutableStateOf(username) }
+    var bioValue by remember(bio) { mutableStateOf(bio) }
 
     Column(
         modifier = Modifier
@@ -128,12 +132,24 @@ fun MyProfileScreen(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = getInitials(nameValue),
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Profile avatar",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(Color.Transparent, CircleShape),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Text(
+                            text = getInitials(nameValue),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
 
                 Box(

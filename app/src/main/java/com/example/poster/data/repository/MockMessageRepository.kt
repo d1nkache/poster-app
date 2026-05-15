@@ -1,6 +1,8 @@
 package com.example.poster.data.repository
 
 import com.example.poster.domain.model.Attachment
+import com.example.poster.domain.model.AttachmentType
+import com.example.poster.domain.model.AttachmentUploadStatus
 import com.example.poster.domain.model.Message
 import com.example.poster.domain.model.MessageStatus
 import com.example.poster.domain.repository.MessageRepository
@@ -87,6 +89,50 @@ class MockMessageRepository : MessageRepository {
                 time = "10:05 AM",
                 isMine = true,
                 status = MessageStatus.READ,
+            ),
+            Message(
+                id = "$chatId-3",
+                chatId = chatId,
+                text = "That's great! Can you send me the files?",
+                time = "10:06 AM",
+                isMine = false,
+                status = MessageStatus.READ,
+            ),
+            Message(
+                id = "$chatId-4",
+                chatId = chatId,
+                text = "Sure, I'll send them in a few minutes.",
+                time = "10:08 AM",
+                isMine = true,
+                status = MessageStatus.READ,
+            ),
+            Message(
+                id = "$chatId-5",
+                chatId = chatId,
+                text = "Thanks! Looking forward to it.",
+                time = "10:10 AM",
+                isMine = false,
+                status = MessageStatus.READ,
+            ),
+            Message(
+                id = "$chatId-6",
+                chatId = chatId,
+                text = "",
+                time = "4:17 PM",
+                isMine = true,
+                status = MessageStatus.SENT,
+                attachments = listOf(
+                    Attachment(
+                        id = "$chatId-file-1",
+                        localUri = null,
+                        remoteUrl = null,
+                        type = AttachmentType.DOCUMENT,
+                        fileName = "RSUBD_PR7_Savvin_SS_IKBO_63_23.pdf",
+                        mimeType = "application/pdf",
+                        sizeBytes = 1_017_958L,
+                        uploadStatus = AttachmentUploadStatus.UPLOADED,
+                    ),
+                ),
             ),
         )
     }

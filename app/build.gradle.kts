@@ -1,8 +1,26 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+private fun String.asBuildConfigString(): String {
+    return "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+val apiNinjasApiKey = (
+    localProperties.getProperty("apiNinjasApiKey")
+        ?: providers.gradleProperty("apiNinjasApiKey").orNull
+    ).orEmpty()
 
 android {
     namespace = "com.example.poster"
@@ -14,6 +32,16 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        buildConfigField(
+            "String",
+            "API_NINJAS_RANDOM_IMAGE_URL",
+            "https://api.api-ninjas.com/v1/randomimage".asBuildConfigString()
+        )
+        buildConfigField(
+            "String",
+            "API_NINJAS_API_KEY",
+            apiNinjasApiKey.asBuildConfigString()
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,6 +64,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -46,10 +75,12 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
+    implementation("androidx.compose.animation:animation")
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
+    implementation("io.coil-kt:coil-compose:2.7.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

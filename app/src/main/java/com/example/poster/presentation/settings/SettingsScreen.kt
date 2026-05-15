@@ -75,6 +75,7 @@ fun SettingsScreen(
     email: String = "your.email@example.com",
     birthday: String = "January 1, 2000",
     bio: String = "Hey there! I'm using Poster.",
+    language: String = "English",
     accessTokenStatus: String = "Configured",
     onBackClick: () -> Unit = {},
     onAccessTokenClick: () -> Unit = {},
@@ -120,7 +121,7 @@ fun SettingsScreen(
         SettingsItemUi(
             id = "language",
             title = "Language",
-            subtitle = "English",
+            subtitle = language,
             icon = Icons.Outlined.Language,
         ),
     )

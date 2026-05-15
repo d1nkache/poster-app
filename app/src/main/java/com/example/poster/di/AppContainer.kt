@@ -29,8 +29,10 @@ import com.example.poster.domain.usecase.chat.SearchChatsUseCase
 import com.example.poster.domain.usecase.message.GetMessagesUseCase
 import com.example.poster.domain.usecase.message.ObserveMessagesUseCase as ObserveDomainMessagesUseCase
 import com.example.poster.domain.usecase.message.SendMessageUseCase as SendDomainMessageUseCase
+import com.example.poster.domain.usecase.message.SendMessageWithAttachmentsUseCase
 import com.example.poster.domain.usecase.profile.GetMyProfileUseCase
 import com.example.poster.domain.usecase.profile.GetUserProfileUseCase
+import com.example.poster.domain.usecase.profile.UpdateAvatarUseCase
 import com.example.poster.domain.usecase.profile.UpdateBioUseCase
 import com.example.poster.domain.usecase.profile.UpdateNameUseCase
 import com.example.poster.domain.usecase.profile.UpdateUsernameUseCase
@@ -131,6 +133,10 @@ object AppContainer {
         SendDomainMessageUseCase(messageRepository)
     }
 
+    val sendMessageWithAttachmentsUseCase: SendMessageWithAttachmentsUseCase by lazy {
+        SendMessageWithAttachmentsUseCase(messageRepository)
+    }
+
     val observeDomainMessagesUseCase: ObserveDomainMessagesUseCase by lazy {
         ObserveDomainMessagesUseCase(messageRepository)
     }
@@ -149,6 +155,10 @@ object AppContainer {
 
     val updateNameUseCase: UpdateNameUseCase by lazy {
         UpdateNameUseCase(profileRepository)
+    }
+
+    val updateAvatarUseCase: UpdateAvatarUseCase by lazy {
+        UpdateAvatarUseCase(profileRepository)
     }
 
     val updateBioUseCase: UpdateBioUseCase by lazy {

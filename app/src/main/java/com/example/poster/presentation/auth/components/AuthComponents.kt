@@ -1,5 +1,10 @@
 package com.example.poster.presentation.auth.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -27,9 +32,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -249,18 +258,62 @@ fun PosterBottomAuthText(
 @Composable
 fun PosterOtpCell(
     value: String,
+    isActive: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val scale = remember { Animatable(1f) }
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isActive -> PosterPrimary
+            value.isNotEmpty() -> PosterPrimary.copy(alpha = 0.72f)
+            else -> PosterStroke
+        },
+        label = "otpBorderColor",
+    )
+    val glowColor by animateColorAsState(
+        targetValue = when {
+            isActive -> PosterPrimary.copy(alpha = 0.32f)
+            value.isNotEmpty() -> PosterPrimary.copy(alpha = 0.18f)
+            else -> Color.Transparent
+        },
+        label = "otpGlowColor",
+    )
+
+    LaunchedEffect(value) {
+        if (value.isEmpty()) {
+            scale.snapTo(1f)
+            return@LaunchedEffect
+        }
+
+        scale.snapTo(0.9f)
+        scale.animateTo(
+            targetValue = 1.08f,
+            animationSpec = tween(durationMillis = 110),
+        )
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        )
+    }
+
     Box(
         modifier = modifier
-            .size(width = 56.dp, height = 56.dp)
+            .shadow(
+                elevation = if (isActive || value.isNotEmpty()) 18.dp else 0.dp,
+                shape = RoundedCornerShape(13.dp),
+                spotColor = glowColor,
+            )
+            .scale(scale.value)
             .background(
                 color = PosterSurface,
                 shape = RoundedCornerShape(13.dp),
             )
             .border(
                 width = 2.dp,
-                color = PosterStroke,
+                color = borderColor,
                 shape = RoundedCornerShape(13.dp),
             ),
         contentAlignment = Alignment.Center,
