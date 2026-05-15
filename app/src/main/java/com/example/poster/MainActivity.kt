@@ -76,6 +76,9 @@ class MainActivity : ComponentActivity() {
                 var myProfileBackScreen by rememberSaveable {
                     mutableStateOf(AppScreen.SETTINGS)
                 }
+                var hasMailAccessToken by rememberSaveable {
+                    mutableStateOf(false)
+                }
 
                 LaunchedEffect(Unit) {
                     Log.d(TAG, "Compose content loaded")
@@ -134,11 +137,16 @@ class MainActivity : ComponentActivity() {
                     AppScreen.CHATS -> {
                         ChatListScreen(
                             chats = sampleChatPreviews,
-                            isSetupRequired = true,
+                            isSetupRequired = !hasMailAccessToken,
+                            hasMailAccessToken = hasMailAccessToken,
                             onChatClick = { chat ->
-                                Log.d(TAG, "Chat clicked: id=${chat.id}, name=${chat.name}")
-                                selectedChat = chat
-                                currentScreen = AppScreen.MESSAGES
+                                if (hasMailAccessToken) {
+                                    Log.d(TAG, "Chat clicked: id=${chat.id}, name=${chat.name}")
+                                    selectedChat = chat
+                                    currentScreen = AppScreen.MESSAGES
+                                } else {
+                                    Log.d(TAG, "Chat blocked, mail access token is missing")
+                                }
                             },
                             onSetupTokenClick = {
                                 Log.d(TAG, "Setup token clicked")
@@ -164,7 +172,11 @@ class MainActivity : ComponentActivity() {
                             email = "your.email@example.com",
                             birthday = "January 1, 2000",
                             bio = "Hey there! I'm using Poster.",
-                            accessTokenStatus = "Configured",
+                            accessTokenStatus = if (hasMailAccessToken) {
+                                "Configured"
+                            } else {
+                                "Not configured"
+                            },
                             onBackClick = {
                                 Log.d(TAG, "Back from Settings")
                                 currentScreen = AppScreen.CHATS
@@ -228,6 +240,7 @@ class MainActivity : ComponentActivity() {
                             },
                             onSaveTokenClick = { token ->
                                 Log.d(TAG, "Access token saved placeholder, length=${token.length}")
+                                hasMailAccessToken = true
                                 /*
                                  * PLACEHOLDER:
                                  * Later this should call SaveMailAccessTokenUseCase(token),
@@ -253,6 +266,7 @@ class MainActivity : ComponentActivity() {
                             contactName = chat.name,
                             contactInitials = chat.initials,
                             messages = messages,
+                            canSendMessages = hasMailAccessToken,
                             onBackClick = {
                                 Log.d(TAG, "Back from Messages")
                                 currentScreen = AppScreen.CHATS
@@ -264,14 +278,19 @@ class MainActivity : ComponentActivity() {
                             onMoreClick = {
                                 Log.d(TAG, "More clicked in Messages")
                             },
-                            onSendClick = { text ->
-                                Log.d(TAG, "Send message: $text")
-                                messages = messages + MessageUi(
-                                    id = System.currentTimeMillis().toString(),
-                                    text = text,
-                                    time = "Now",
-                                    isMine = true,
-                                )
+                            onSendClick = { text, attachments ->
+                                if (hasMailAccessToken) {
+                                    Log.d(TAG, "Send message: $text, attachments=${attachments.size}")
+                                    messages = messages + MessageUi(
+                                        id = System.currentTimeMillis().toString(),
+                                        text = text,
+                                        time = "Now",
+                                        isMine = true,
+                                        attachments = attachments,
+                                    )
+                                } else {
+                                    Log.d(TAG, "Send message blocked, mail access token is missing")
+                                }
                             },
                         )
                     }
@@ -284,6 +303,7 @@ class MainActivity : ComponentActivity() {
                             name = chat.name,
                             username = "@${chat.name.lowercase().replace(" ", ".")}",
                             bio = "Product designer passionate about creating beautiful and functional user experiences.",
+                            attachments = messages.flatMap { it.attachments },
                             onBackClick = {
                                 Log.d(TAG, "Back from Profile")
                                 currentScreen = AppScreen.MESSAGES

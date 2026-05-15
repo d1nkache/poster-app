@@ -8,6 +8,8 @@ import com.example.poster.data.remote.RemoteMessageDto
 import com.example.poster.data.remote.RemoteProfileDto
 import com.example.poster.data.remote.RemoteUserDto
 import com.example.poster.domain.model.Attachment
+import com.example.poster.domain.model.AttachmentType
+import com.example.poster.domain.model.AttachmentUploadStatus
 import com.example.poster.domain.model.AuthSession
 import com.example.poster.domain.model.Chat
 import com.example.poster.domain.model.Message
@@ -54,9 +56,13 @@ fun RemoteChatDto.toDomain(): Chat {
 fun RemoteAttachmentDto.toDomain(): Attachment {
     return Attachment(
         id = id,
-        type = type,
-        url = url,
+        localUri = localUri,
+        remoteUrl = remoteUrl,
+        type = type.toAttachmentType(),
         fileName = fileName,
+        mimeType = mimeType,
+        sizeBytes = sizeBytes,
+        uploadStatus = uploadStatus.toAttachmentUploadStatus(),
     )
 }
 
@@ -83,10 +89,34 @@ fun RemoteAuthSessionDto.toDomain(): AuthSession {
 fun Attachment.toRemote(): RemoteAttachmentDto {
     return RemoteAttachmentDto(
         id = id,
-        type = type,
-        url = url,
+        type = type.name,
+        localUri = localUri,
+        remoteUrl = remoteUrl,
         fileName = fileName,
+        mimeType = mimeType,
+        sizeBytes = sizeBytes,
+        uploadStatus = uploadStatus.name,
     )
+}
+
+private fun String.toAttachmentType(): AttachmentType {
+    return when (uppercase()) {
+        "IMAGE" -> AttachmentType.IMAGE
+        "VIDEO" -> AttachmentType.VIDEO
+        "AUDIO" -> AttachmentType.AUDIO
+        "DOCUMENT", "FILE" -> AttachmentType.DOCUMENT
+        else -> AttachmentType.UNKNOWN
+    }
+}
+
+private fun String.toAttachmentUploadStatus(): AttachmentUploadStatus {
+    return when (uppercase()) {
+        "LOCAL_ONLY" -> AttachmentUploadStatus.LOCAL_ONLY
+        "UPLOADING" -> AttachmentUploadStatus.UPLOADING
+        "UPLOADED" -> AttachmentUploadStatus.UPLOADED
+        "FAILED" -> AttachmentUploadStatus.FAILED
+        else -> AttachmentUploadStatus.UPLOADED
+    }
 }
 
 fun AuthSession.toLocal(): LocalAuthSessionEntity {

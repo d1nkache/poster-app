@@ -165,6 +165,7 @@ internal val sampleChatPreviews = listOf(
 fun ChatListScreen(
     chats: List<ChatPreviewUi>,
     isSetupRequired: Boolean,
+    hasMailAccessToken: Boolean = !isSetupRequired,
     onChatClick: (ChatPreviewUi) -> Unit,
     onSetupTokenClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -226,6 +227,16 @@ fun ChatListScreen(
                             ),
                         )
                     }
+
+                    item {
+                        MailAccessLockedNotice(
+                            modifier = Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 10.dp,
+                            ),
+                        )
+                    }
                 }
 
                 items(
@@ -234,11 +245,48 @@ fun ChatListScreen(
                 ) { chat ->
                     ChatPreviewItem(
                         chat = chat,
+                        enabled = hasMailAccessToken,
                         onClick = { onChatClick(chat) },
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MailAccessLockedNotice(
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = Color(0xFF100F1D),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = PosterStroke.copy(alpha = 0.75f),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+    ) {
+        Text(
+            text = "Чаты пока грустят",
+            color = PosterTextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Spacer(modifier = Modifier.height(7.dp))
+
+        Text(
+            text = "Без mail access token нельзя читать чаты и отправлять сообщения. Настрой токен, и Poster снова оживет.",
+            color = PosterTextSecondary,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
     }
 }
 
@@ -429,13 +477,14 @@ private fun SetupTokenAlert(
 @Composable
 private fun ChatPreviewItem(
     chat: ChatPreviewUi,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(84.dp)
-            .clickable { onClick() }
+            .clickable(enabled = enabled) { onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -453,7 +502,7 @@ private fun ChatPreviewItem(
         ) {
             Text(
                 text = chat.name,
-                color = PosterTextPrimary,
+                color = if (enabled) PosterTextPrimary else PosterTextMuted,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -463,8 +512,12 @@ private fun ChatPreviewItem(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = chat.lastMessage,
-                color = PosterTextSecondary,
+                text = if (enabled) {
+                    chat.lastMessage
+                } else {
+                    "Недоступно без mail access token"
+                },
+                color = if (enabled) PosterTextSecondary else PosterTextMuted,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -476,12 +529,12 @@ private fun ChatPreviewItem(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = chat.time,
+                text = if (enabled) chat.time else "--",
                 color = PosterTextMuted,
                 fontSize = 13.sp,
             )
 
-            if (chat.unreadCount > 0) {
+            if (enabled && chat.unreadCount > 0) {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Box(
@@ -557,6 +610,7 @@ private fun ChatListScreenPreview() {
     ChatListScreen(
         chats = sampleChatPreviews,
         isSetupRequired = true,
+        hasMailAccessToken = false,
         onChatClick = {},
         onSetupTokenClick = {},
         onSettingsClick = {},

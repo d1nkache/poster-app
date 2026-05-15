@@ -4,6 +4,7 @@ import com.example.poster.data.local.PosterLocalDataSource
 import com.example.poster.data.mapper.toDomain
 import com.example.poster.data.mapper.toLocal
 import com.example.poster.data.remote.PosterRemoteDataSource
+import com.example.poster.domain.model.AuthSession
 import com.example.poster.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(

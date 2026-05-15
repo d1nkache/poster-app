@@ -1,6 +1,5 @@
 package com.example.poster.data.remote
 
-import com.example.poster.domain.model.Attachment
 import com.example.poster.domain.model.AttachmentType
 import com.example.poster.domain.model.Profile
 import kotlin.math.absoluteValue
@@ -28,9 +27,13 @@ data class RemoteChatDto(
 
 data class RemoteAttachmentDto(
     val id: String,
-    val type: AttachmentType,
-    val url: String,
+    val type: String,
+    val localUri: String?,
+    val remoteUrl: String?,
     val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val uploadStatus: String,
 )
 
 data class RemoteMessageDto(
@@ -128,9 +131,13 @@ class StubPosterRemoteDataSource : PosterRemoteDataSource {
                 attachments = listOf(
                     RemoteAttachmentDto(
                         id = "attachment-1",
-                        type = AttachmentType.FILE,
-                        url = "https://example.com/spec.pdf",
+                        type = AttachmentType.DOCUMENT.name,
+                        localUri = null,
+                        remoteUrl = "https://example.com/spec.pdf",
                         fileName = "spec.pdf",
+                        mimeType = "application/pdf",
+                        sizeBytes = 248_000L,
+                        uploadStatus = "UPLOADED",
                     )
                 ),
                 timestampMillis = System.currentTimeMillis(),

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -42,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.poster.domain.model.Attachment
+import com.example.poster.domain.model.AttachmentType
 
 private val PosterBackground = Color(0xFF030306)
 private val PosterTopBar = Color(0xFF101014)
@@ -65,9 +69,20 @@ fun ProfileScreen(
     name: String = "Alice Johnson",
     username: String = "@alice.johnson",
     bio: String = "Product designer passionate about creating beautiful and functional user experiences.",
+    attachments: List<Attachment> = emptyList(),
     onBackClick: () -> Unit = {},
 ) {
     var selectedTab by remember { mutableStateOf(ProfileTab.MEDIA) }
+    val mediaAttachments = remember(attachments) {
+        attachments.filter { attachment ->
+            attachment.type == AttachmentType.IMAGE || attachment.type == AttachmentType.VIDEO
+        }
+    }
+    val fileAttachments = remember(attachments) {
+        attachments.filterNot { attachment ->
+            attachment.type == AttachmentType.IMAGE || attachment.type == AttachmentType.VIDEO
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -174,8 +189,8 @@ fun ProfileScreen(
         )
 
         when (selectedTab) {
-            ProfileTab.MEDIA -> MediaGrid()
-            ProfileTab.FILES -> FilesPlaceholder()
+            ProfileTab.MEDIA -> MediaGrid(attachments = mediaAttachments)
+            ProfileTab.FILES -> FilesList(attachments = fileAttachments)
         }
     }
 }
@@ -313,9 +328,20 @@ private fun ProfileTabItem(
 }
 
 @Composable
-private fun MediaGrid() {
-    val items = remember {
-        List(9) { index -> index.toString() }
+private fun MediaGrid(attachments: List<Attachment>) {
+    if (attachments.isEmpty()) {
+        EmptyProfileTab(
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Image,
+                    contentDescription = null,
+                    tint = PosterTextMuted,
+                    modifier = Modifier.size(42.dp),
+                )
+            },
+            text = "No media yet",
+        )
+        return
     }
 
     LazyVerticalGrid(
@@ -325,7 +351,7 @@ private fun MediaGrid() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(items) {
+        items(attachments, key = { it.id }) { attachment ->
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -339,30 +365,127 @@ private fun MediaGrid() {
                         color = PosterDivider,
                         shape = RoundedCornerShape(7.dp),
                     ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Image,
+                    contentDescription = null,
+                    tint = PosterTextMuted,
+                    modifier = Modifier.size(32.dp),
+                )
+                Text(
+                    text = attachment.fileName,
+                    color = PosterTextSecondary,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilesList(attachments: List<Attachment>) {
+    if (attachments.isEmpty()) {
+        EmptyProfileTab(
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    tint = PosterTextMuted,
+                    modifier = Modifier.size(42.dp),
+                )
+            },
+            text = "No files yet",
+        )
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        lazyItems(attachments, key = { it.id }) { attachment ->
+            FileAttachmentRow(attachment = attachment)
+        }
+    }
+}
+
+@Composable
+private fun FileAttachmentRow(attachment: Attachment) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = PosterSurface,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .border(
+                width = 0.5.dp,
+                color = PosterDivider,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    color = PosterStroke.copy(alpha = 0.65f),
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Description,
+                contentDescription = null,
+                tint = Color(0xFFB7BCFF),
+                modifier = Modifier.size(22.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = attachment.fileName,
+                color = PosterTextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = attachment.mimeType.ifBlank { "file" },
+                color = PosterTextMuted,
+                fontSize = 13.sp,
             )
         }
     }
 }
 
 @Composable
-private fun FilesPlaceholder() {
+private fun EmptyProfileTab(
+    icon: @Composable () -> Unit,
+    text: String,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 72.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Description,
-            contentDescription = null,
-            tint = PosterTextMuted,
-            modifier = Modifier.size(42.dp),
-        )
+        icon()
 
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "No files yet",
+            text = text,
             color = PosterTextMuted,
             fontSize = 16.sp,
         )

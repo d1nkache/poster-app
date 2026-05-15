@@ -1,14 +1,10 @@
 package com.example.poster.di
 
-import com.example.poster.data.local.InMemoryPosterLocalDataSource
-import com.example.poster.data.local.PosterLocalDataSource
-import com.example.poster.data.remote.PosterRemoteDataSource
-import com.example.poster.data.remote.StubPosterRemoteDataSource
-import com.example.poster.data.repository.AuthRepositoryImpl
-import com.example.poster.data.repository.ChatRepositoryImpl
-import com.example.poster.data.repository.MessageRepositoryImpl
-import com.example.poster.data.repository.ProfileRepositoryImpl
-import com.example.poster.data.repository.SettingsRepositoryImpl
+import com.example.poster.data.repository.MockAuthRepository
+import com.example.poster.data.repository.MockChatRepository
+import com.example.poster.data.repository.MockMessageRepository
+import com.example.poster.data.repository.MockProfileRepository
+import com.example.poster.data.repository.MockSettingsRepository
 import com.example.poster.domain.repository.AuthRepository
 import com.example.poster.domain.repository.ChatRepository
 import com.example.poster.domain.repository.MessageRepository
@@ -43,30 +39,24 @@ import com.example.poster.domain.usecase.settings.GetSettingsUseCase
 import com.example.poster.domain.usecase.settings.SaveMailAccessTokenUseCase
 
 object AppContainer {
-    private val remoteDataSource: PosterRemoteDataSource = StubPosterRemoteDataSource()
-    private val localDataSource: PosterLocalDataSource = InMemoryPosterLocalDataSource()
-
     val authRepository: AuthRepository by lazy {
-        AuthRepositoryImpl(
-            remoteDataSource = remoteDataSource,
-            localDataSource = localDataSource,
-        )
+        MockAuthRepository()
     }
 
     val chatRepository: ChatRepository by lazy {
-        ChatRepositoryImpl(remoteDataSource)
+        MockChatRepository()
     }
 
     val messageRepository: MessageRepository by lazy {
-        MessageRepositoryImpl(remoteDataSource)
+        MockMessageRepository()
     }
 
     val profileRepository: ProfileRepository by lazy {
-        ProfileRepositoryImpl(remoteDataSource)
+        MockProfileRepository()
     }
 
     val settingsRepository: SettingsRepository by lazy {
-        SettingsRepositoryImpl()
+        MockSettingsRepository()
     }
 
     val loginUseCase: LoginUseCase by lazy {
