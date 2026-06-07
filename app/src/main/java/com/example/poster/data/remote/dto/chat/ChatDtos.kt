@@ -11,7 +11,7 @@ data class ChatDto(
 )
 
 data class ChatListResponseDto(
-    val chats: List<ChatDto>,
+    val items: List<ChatDto>,
 )
 
 data class CreateChatRequestDto(

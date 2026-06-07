@@ -9,5 +9,4 @@ interface MessageApi {
     suspend fun sendMessage(chatId: String, request: SendMessageRequestDto): MessageDto
     suspend fun deleteMessage(messageId: String)
     suspend fun markMessageAsRead(messageId: String)
-    suspend fun retryMessage(messageId: String): MessageDto
 }

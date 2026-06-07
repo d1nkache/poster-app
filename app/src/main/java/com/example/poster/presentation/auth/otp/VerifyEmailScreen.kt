@@ -2,6 +2,9 @@ package com.example.poster.presentation.auth.otp
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +55,8 @@ import com.example.poster.presentation.auth.components.PosterTextPrimary
 import com.example.poster.presentation.auth.components.PosterTextSecondary
 import com.example.poster.ui.theme.PosterTheme
 
+private val VerifyMotionEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
 @Composable
 fun VerifyEmailScreen(
     email: String,
@@ -67,6 +72,26 @@ fun VerifyEmailScreen(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
     val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val topPadding by animateDpAsState(
+        targetValue = if (isKeyboardVisible) 48.dp else 92.dp,
+        animationSpec = tween(durationMillis = 300, easing = VerifyMotionEasing),
+        label = "verifyTopPadding",
+    )
+    val logoBottomSpacing by animateDpAsState(
+        targetValue = if (isKeyboardVisible) 28.dp else 48.dp,
+        animationSpec = tween(durationMillis = 300, easing = VerifyMotionEasing),
+        label = "verifyLogoSpacing",
+    )
+    val otpTopSpacing by animateDpAsState(
+        targetValue = if (isKeyboardVisible) 24.dp else 34.dp,
+        animationSpec = tween(durationMillis = 260, easing = VerifyMotionEasing),
+        label = "verifyOtpTopSpacing",
+    )
+    val buttonTopSpacing by animateDpAsState(
+        targetValue = if (isKeyboardVisible) 24.dp else 34.dp,
+        animationSpec = tween(durationMillis = 260, easing = VerifyMotionEasing),
+        label = "verifyButtonTopSpacing",
+    )
 
     PosterAuthBackground(modifier = modifier) {
         Column(
@@ -79,14 +104,14 @@ fun VerifyEmailScreen(
                 .padding(
                     start = 28.dp,
                     end = 28.dp,
-                    top = if (isKeyboardVisible) 48.dp else 92.dp,
+                    top = topPadding,
                     bottom = 32.dp,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             PosterLogoBlock(showSubtitle = false)
 
-            Spacer(modifier = Modifier.height(if (isKeyboardVisible) 28.dp else 48.dp))
+            Spacer(modifier = Modifier.height(logoBottomSpacing))
 
             Text(
                 text = "Verify Your Email",
@@ -113,7 +138,7 @@ fun VerifyEmailScreen(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(if (isKeyboardVisible) 24.dp else 34.dp))
+            Spacer(modifier = Modifier.height(otpTopSpacing))
 
             BoxWithConstraints(
                 modifier = Modifier
@@ -176,7 +201,7 @@ fun VerifyEmailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(if (isKeyboardVisible) 24.dp else 34.dp))
+            Spacer(modifier = Modifier.height(buttonTopSpacing))
 
             PosterPrimaryButton(
                 text = "Verify",

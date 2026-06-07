@@ -1,6 +1,7 @@
 package com.example.poster.data.repository
 
 import com.example.poster.domain.model.UserSettings
+import com.example.poster.domain.model.MailAccessSettings
 import com.example.poster.domain.repository.SettingsRepository
 
 class MockSettingsRepository : SettingsRepository {
@@ -21,8 +22,8 @@ class MockSettingsRepository : SettingsRepository {
         )
     }
 
-    override suspend fun saveMailAccessToken(token: String): Result<Unit> {
-        hasMailAccessToken = token.isNotBlank()
+    override suspend fun saveMailAccessToken(settings: MailAccessSettings): Result<Unit> {
+        hasMailAccessToken = settings.token.isNotBlank()
         return Result.success(Unit)
     }
 

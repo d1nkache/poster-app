@@ -1,7 +1,8 @@
 package com.example.poster.data.mapper
 
+import com.example.poster.core.network.NetworkConfig
+import com.example.poster.data.remote.dto.message.MessageAttachmentDto
 import com.example.poster.data.remote.dto.message.MessageDto
-import com.example.poster.data.remote.dto.message.AttachmentDto
 import com.example.poster.domain.model.Attachment
 import com.example.poster.domain.model.AttachmentType
 import com.example.poster.domain.model.AttachmentUploadStatus
@@ -10,25 +11,26 @@ import com.example.poster.domain.model.MessageStatus
 
 fun MessageDto.toDomain(): Message {
     return Message(
-        id = id,
-        chatId = chatId,
-        text = text.orEmpty(),
+        id = id.toString(),
+        chatId = chatId.toString(),
+        text = bodyText,
         time = createdAt,
-        isMine = isMine,
+        isMine = direction.equals("OUTGOING", ignoreCase = true),
         status = status.toMessageStatus(),
         attachments = attachments.map { it.toDomain() },
     )
 }
 
-fun AttachmentDto.toDomain(): Attachment {
+fun MessageAttachmentDto.toDomain(): Attachment {
+    val mimeType = contentType.ifBlank { "application/octet-stream" }
     return Attachment(
-        id = id,
+        id = id.toString(),
         localUri = null,
-        remoteUrl = url,
-        fileName = fileName,
+        remoteUrl = url.toAbsoluteAttachmentUrl(),
+        fileName = fileName ?: url.substringAfterLast('/').ifBlank { "attachment" },
         mimeType = mimeType,
         sizeBytes = sizeBytes,
-        type = type.toAttachmentType(mimeType),
+        type = mimeType.toAttachmentType(),
         uploadStatus = AttachmentUploadStatus.UPLOADED,
     )
 }
@@ -44,13 +46,20 @@ private fun String.toMessageStatus(): MessageStatus {
     }
 }
 
-private fun String.toAttachmentType(mimeType: String): AttachmentType {
+private fun String.toAttachmentType(): AttachmentType {
     return when {
-        equals("IMAGE", ignoreCase = true) || mimeType.startsWith("image/") -> AttachmentType.IMAGE
-        equals("VIDEO", ignoreCase = true) || mimeType.startsWith("video/") -> AttachmentType.VIDEO
-        equals("AUDIO", ignoreCase = true) || mimeType.startsWith("audio/") -> AttachmentType.AUDIO
-        equals("DOCUMENT", ignoreCase = true) || equals("FILE", ignoreCase = true) -> AttachmentType.DOCUMENT
-        mimeType.contains("pdf") || mimeType.contains("text") -> AttachmentType.DOCUMENT
+        startsWith("image/") -> AttachmentType.IMAGE
+        startsWith("video/") -> AttachmentType.VIDEO
+        startsWith("audio/") -> AttachmentType.AUDIO
+        contains("pdf") || contains("text") -> AttachmentType.DOCUMENT
         else -> AttachmentType.UNKNOWN
+    }
+}
+
+private fun String.toAbsoluteAttachmentUrl(): String {
+    return if (startsWith("http://") || startsWith("https://")) {
+        this
+    } else {
+        NetworkConfig.BASE_URL.trimEnd('/') + "/" + trimStart('/')
     }
 }

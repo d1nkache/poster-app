@@ -13,5 +13,9 @@ fun SettingsDto.toDomain(profile: ProfileDto): UserSettings {
         bio = profile.bio.orEmpty(),
         language = language,
         hasMailAccessToken = hasMailAccessToken,
+        smtpHost = smtpHost,
+        smtpPort = smtpPort,
+        imapHost = imapHost,
+        imapPort = imapPort,
     )
 }

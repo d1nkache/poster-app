@@ -7,6 +7,6 @@ fun AuthResponseDto.toDomainSession(): AuthSession {
     return AuthSession(
         accessToken = accessToken,
         refreshToken = refreshToken,
-        userId = user.id,
+        userId = profile.id,
     )
 }

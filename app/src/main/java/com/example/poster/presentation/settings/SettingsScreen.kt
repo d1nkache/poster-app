@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AlternateEmail
@@ -25,23 +28,34 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -82,40 +96,81 @@ fun SettingsScreen(
     onPrivacyClick: () -> Unit = {},
     onLanguageClick: () -> Unit = {},
     onProfilePhotoClick: () -> Unit = {},
-    onAccountItemClick: (String) -> Unit = {},
+    onAccountValueSave: (String, String) -> Unit = { _, _ -> },
 ) {
-    val accountItems = listOf(
-        SettingsItemUi(
-            id = "name",
-            title = "Name",
-            subtitle = name,
-            icon = Icons.Outlined.AccountCircle,
-        ),
-        SettingsItemUi(
-            id = "username",
-            title = "Username",
-            subtitle = username,
-            icon = Icons.Outlined.AlternateEmail,
-        ),
-        SettingsItemUi(
-            id = "email",
-            title = "Email",
-            subtitle = email,
-            icon = Icons.Outlined.Email,
-        ),
-        SettingsItemUi(
-            id = "birthday",
-            title = "Birthday",
-            subtitle = birthday,
-            icon = Icons.Outlined.CalendarMonth,
-        ),
-        SettingsItemUi(
-            id = "bio",
-            title = "Bio",
-            subtitle = bio,
-            icon = Icons.Outlined.Article,
-        ),
-    )
+    var currentName by rememberSaveable(name) { mutableStateOf(name) }
+    var currentUsername by rememberSaveable(username) { mutableStateOf(username) }
+    var currentEmail by rememberSaveable(email) { mutableStateOf(email) }
+    var currentBirthday by rememberSaveable(birthday) { mutableStateOf(birthday) }
+    var currentBio by rememberSaveable(bio) { mutableStateOf(bio) }
+    var editingAccountItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    var editingAccountValue by rememberSaveable { mutableStateOf("") }
+
+    fun accountValueFor(id: String): String {
+        return when (id) {
+            "name" -> currentName
+            "username" -> currentUsername
+            "email" -> currentEmail
+            "birthday" -> currentBirthday
+            "bio" -> currentBio
+            else -> ""
+        }
+    }
+
+    fun saveAccountValue(id: String, value: String) {
+        val normalizedValue = normalizeAccountValue(id, value)
+        when (id) {
+            "name" -> currentName = normalizedValue
+            "username" -> currentUsername = normalizedValue
+            "email" -> currentEmail = normalizedValue
+            "birthday" -> currentBirthday = normalizedValue
+            "bio" -> currentBio = normalizedValue
+        }
+        editingAccountItemId = null
+        editingAccountValue = ""
+        onAccountValueSave(id, normalizedValue)
+    }
+
+    val accountItems = remember(
+        currentName,
+        currentUsername,
+        currentEmail,
+        currentBirthday,
+        currentBio,
+    ) {
+        listOf(
+            SettingsItemUi(
+                id = "name",
+                title = "Name",
+                subtitle = currentName,
+                icon = Icons.Outlined.AccountCircle,
+            ),
+            SettingsItemUi(
+                id = "username",
+                title = "Username",
+                subtitle = currentUsername,
+                icon = Icons.Outlined.AlternateEmail,
+            ),
+            SettingsItemUi(
+                id = "email",
+                title = "Email",
+                subtitle = currentEmail,
+                icon = Icons.Outlined.Email,
+            ),
+            SettingsItemUi(
+                id = "birthday",
+                title = "Birthday",
+                subtitle = currentBirthday,
+                icon = Icons.Outlined.CalendarMonth,
+            ),
+            SettingsItemUi(
+                id = "bio",
+                title = "Bio",
+                subtitle = currentBio,
+                icon = Icons.Outlined.Article,
+            ),
+        )
+    }
 
     val preferenceItems = listOf(
         SettingsItemUi(
@@ -168,8 +223,8 @@ fun SettingsScreen(
         ) {
             item {
                 SettingsProfileHeader(
-                    name = name,
-                    username = username,
+                    name = currentName,
+                    username = currentUsername,
                     onProfilePhotoClick = onProfilePhotoClick,
                 )
             }
@@ -178,8 +233,25 @@ fun SettingsScreen(
                 SettingsSection(
                     title = "ACCOUNT",
                     items = accountItems,
+                    editingItemId = editingAccountItemId,
+                    editingValue = editingAccountValue,
+                    onEditingValueChange = { editingAccountValue = it },
+                    onEditClick = { item ->
+                        editingAccountItemId = item.id
+                        editingAccountValue = accountValueFor(item.id)
+                    },
+                    onSaveEdit = { item ->
+                        if (canSaveAccountValue(item.id, editingAccountValue)) {
+                            saveAccountValue(item.id, editingAccountValue)
+                        }
+                    },
+                    onCancelEdit = {
+                        editingAccountItemId = null
+                        editingAccountValue = ""
+                    },
                     onItemClick = { item ->
-                        onAccountItemClick(item.id)
+                        editingAccountItemId = item.id
+                        editingAccountValue = accountValueFor(item.id)
                     },
                 )
             }
@@ -349,6 +421,12 @@ private fun SettingsSection(
     title: String,
     items: List<SettingsItemUi>,
     onItemClick: (SettingsItemUi) -> Unit,
+    editingItemId: String? = null,
+    editingValue: String = "",
+    onEditingValueChange: (String) -> Unit = {},
+    onEditClick: (SettingsItemUi) -> Unit = onItemClick,
+    onSaveEdit: (SettingsItemUi) -> Unit = {},
+    onCancelEdit: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -377,10 +455,22 @@ private fun SettingsSection(
                 .border(width = 0.5.dp, color = PosterDivider),
         ) {
             items.forEachIndexed { index, item ->
+                val isEditing = item.id == editingItemId
                 SettingsRow(
                     item = item,
                     showDivider = index < items.lastIndex,
-                    onClick = { onItemClick(item) },
+                    isEditing = isEditing,
+                    editingValue = if (isEditing) editingValue else "",
+                    onEditingValueChange = onEditingValueChange,
+                    onSaveEdit = { onSaveEdit(item) },
+                    onCancelEdit = onCancelEdit,
+                    onClick = {
+                        if (isEditing) {
+                            onCancelEdit()
+                        } else {
+                            onEditClick(item)
+                        }
+                    },
                 )
             }
         }
@@ -392,16 +482,20 @@ private fun SettingsRow(
     item: SettingsItemUi,
     showDivider: Boolean,
     onClick: () -> Unit,
+    isEditing: Boolean = false,
+    editingValue: String = "",
+    onEditingValueChange: (String) -> Unit = {},
+    onSaveEdit: () -> Unit = {},
+    onCancelEdit: () -> Unit = {},
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(65.dp)
+                .clickable { onClick() }
                 .padding(start = 30.dp, end = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -452,11 +546,40 @@ private fun SettingsRow(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = PosterTextMuted,
-                modifier = Modifier.size(22.dp),
+            if (isEditing) {
+                IconButton(
+                    onClick = onCancelEdit,
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Cancel",
+                        tint = PosterTextMuted,
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = PosterTextMuted,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+
+        if (isEditing) {
+            InlineSettingsEditor(
+                itemId = item.id,
+                value = editingValue,
+                onValueChange = onEditingValueChange,
+                onSaveClick = onSaveEdit,
+                canSave = canSaveAccountValue(item.id, editingValue),
+                modifier = Modifier.padding(
+                    start = 82.dp,
+                    end = 22.dp,
+                    bottom = 14.dp,
+                ),
             )
         }
 
@@ -469,6 +592,123 @@ private fun SettingsRow(
                     .background(PosterDivider),
             )
         }
+    }
+}
+
+@Composable
+private fun InlineSettingsEditor(
+    itemId: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSaveClick: () -> Unit,
+    canSave: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val singleLine = itemId != "bio"
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(if (singleLine) 46.dp else 92.dp)
+                .background(
+                    color = PosterSection.copy(alpha = 0.86f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .border(
+                    width = 1.dp,
+                    color = PosterPrimary.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            contentAlignment = Alignment.TopStart,
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = singleLine,
+                cursorBrush = SolidColor(PosterPrimary),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = accountKeyboardType(itemId),
+                ),
+                textStyle = TextStyle(
+                    color = PosterTextPrimary,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.TopStart,
+                    ) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = accountPlaceholder(itemId),
+                                color = PosterTextMuted,
+                                fontSize = 14.sp,
+                            )
+                        }
+
+                        innerTextField()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        IconButton(
+            onClick = onSaveClick,
+            enabled = canSave,
+            modifier = Modifier
+                .size(42.dp)
+                .background(
+                    color = if (canSave) PosterPrimary.copy(alpha = 0.2f) else PosterDivider,
+                    shape = CircleShape,
+                ),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = "Save",
+                tint = if (canSave) PosterAccent else PosterTextMuted,
+                modifier = Modifier.size(21.dp),
+            )
+        }
+    }
+}
+
+private fun accountKeyboardType(itemId: String): KeyboardType {
+    return when (itemId) {
+        "email" -> KeyboardType.Email
+        else -> KeyboardType.Text
+    }
+}
+
+private fun accountPlaceholder(itemId: String): String {
+    return when (itemId) {
+        "name" -> "Enter name"
+        "username" -> "@username"
+        "email" -> "email@example.com"
+        "birthday" -> "Birthday"
+        "bio" -> "Write a short bio"
+        else -> ""
+    }
+}
+
+private fun canSaveAccountValue(itemId: String, value: String): Boolean {
+    return itemId == "bio" || value.trim().isNotEmpty()
+}
+
+private fun normalizeAccountValue(itemId: String, value: String): String {
+    val trimmedValue = value.trim()
+    return when {
+        itemId == "bio" -> trimmedValue
+        itemId == "username" && trimmedValue.isNotEmpty() && !trimmedValue.startsWith("@") -> "@$trimmedValue"
+        else -> trimmedValue
     }
 }
 

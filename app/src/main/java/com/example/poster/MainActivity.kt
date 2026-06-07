@@ -13,14 +13,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,14 +30,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Density
-import com.example.poster.di.AppContainer
 import com.example.poster.domain.model.Attachment
 import com.example.poster.domain.model.AttachmentType
 import com.example.poster.domain.model.AttachmentUploadStatus
 import com.example.poster.domain.model.Profile
+import com.example.poster.domain.repository.AuthRepository
+import com.example.poster.domain.repository.SettingsRepository
+import com.example.poster.domain.usecase.ObserveChatsUseCase
+import com.example.poster.domain.usecase.auth.SignInUseCase
+import com.example.poster.domain.usecase.auth.SignUpUseCase
+import com.example.poster.domain.usecase.auth.VerifyOtpUseCase
+import com.example.poster.domain.usecase.chat.GetChatsUseCase
+import com.example.poster.domain.usecase.message.GetMessagesUseCase
+import com.example.poster.domain.usecase.message.ObserveMessagesUseCase
+import com.example.poster.domain.usecase.message.SendMessageUseCase
+import com.example.poster.domain.usecase.message.SendMessageWithAttachmentsUseCase
+import com.example.poster.domain.usecase.profile.GetMyProfileUseCase
+import com.example.poster.domain.usecase.profile.UpdateAvatarUseCase
+import com.example.poster.domain.usecase.profile.UpdateBioUseCase
+import com.example.poster.domain.usecase.profile.UpdateNameUseCase
+import com.example.poster.domain.usecase.profile.UpdateUsernameUseCase
+import com.example.poster.domain.usecase.settings.CheckMailAccessTokenUseCase
+import com.example.poster.domain.usecase.settings.GetSettingsUseCase
+import com.example.poster.domain.usecase.settings.SaveMailAccessTokenUseCase
 import com.example.poster.presentation.auth.otp.VerifyEmailScreen
 import com.example.poster.presentation.auth.register.RegisterScreen
 import com.example.poster.presentation.auth.signin.SignInScreen
@@ -56,12 +76,71 @@ import com.example.poster.presentation.settings.LanguageSettingsScreen
 import com.example.poster.presentation.settings.PrivacySettingsScreen
 import com.example.poster.presentation.settings.PrivacySettingsUi
 import com.example.poster.presentation.settings.SettingsScreen
-import com.example.poster.presentation.settings.SettingsTextEditScreen
 import com.example.poster.ui.theme.PosterTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var observeChatsUseCase: ObserveChatsUseCase
+
+    @Inject
+    lateinit var signInUseCase: SignInUseCase
+
+    @Inject
+    lateinit var signUpUseCase: SignUpUseCase
+
+    @Inject
+    lateinit var verifyOtpUseCase: VerifyOtpUseCase
+
+    @Inject
+    lateinit var getChatsUseCase: GetChatsUseCase
+
+    @Inject
+    lateinit var getMessagesUseCase: GetMessagesUseCase
+
+    @Inject
+    lateinit var observeMessagesUseCase: ObserveMessagesUseCase
+
+    @Inject
+    lateinit var sendMessageUseCase: SendMessageUseCase
+
+    @Inject
+    lateinit var sendMessageWithAttachmentsUseCase: SendMessageWithAttachmentsUseCase
+
+    @Inject
+    lateinit var getMyProfileUseCase: GetMyProfileUseCase
+
+    @Inject
+    lateinit var updateAvatarUseCase: UpdateAvatarUseCase
+
+    @Inject
+    lateinit var updateNameUseCase: UpdateNameUseCase
+
+    @Inject
+    lateinit var updateUsernameUseCase: UpdateUsernameUseCase
+
+    @Inject
+    lateinit var updateBioUseCase: UpdateBioUseCase
+
+    @Inject
+    lateinit var getSettingsUseCase: GetSettingsUseCase
+
+    @Inject
+    lateinit var saveMailAccessTokenUseCase: SaveMailAccessTokenUseCase
+
+    @Inject
+    lateinit var checkMailAccessTokenUseCase: CheckMailAccessTokenUseCase
+
     companion object {
         private const val TAG = "PosterMainActivity"
         private const val UI_SCALE = 0.85f
@@ -131,6 +210,9 @@ class MainActivity : ComponentActivity() {
                 var hasMailAccessToken by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var isRefreshingChats by rememberSaveable {
+                    mutableStateOf(false)
+                }
                 var settingsEmail by rememberSaveable {
                     mutableStateOf("your.email@example.com")
                 }
@@ -140,8 +222,17 @@ class MainActivity : ComponentActivity() {
                 var settingsLanguage by rememberSaveable {
                     mutableStateOf("English")
                 }
-                var currentEditableSetting by rememberSaveable {
-                    mutableStateOf(EditableSetting.NAME)
+                var smtpHost by rememberSaveable {
+                    mutableStateOf("")
+                }
+                var smtpPort by rememberSaveable {
+                    mutableStateOf("")
+                }
+                var imapHost by rememberSaveable {
+                    mutableStateOf("")
+                }
+                var imapPort by rememberSaveable {
+                    mutableStateOf("")
                 }
                 var showOnlineStatus by rememberSaveable {
                     mutableStateOf(true)
@@ -165,7 +256,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     scope.launch {
-                        AppContainer.updateAvatarUseCase(uri.toString())
+                        updateAvatarUseCase(uri.toString())
                             .onSuccess { updatedProfile ->
                                 myProfile = updatedProfile
                             }
@@ -180,15 +271,15 @@ class MainActivity : ComponentActivity() {
                     Log.d(TAG, "Auth placeholder check started")
                     Log.d(TAG, "isAuthorized = $isAuthorized")
 
-                    AppContainer.observeChatsUseCase().collect { loadedChats ->
+                    observeChatsUseCase().collect { loadedChats ->
                         chats = loadedChats.map { chat -> chat.toChatPreviewUi() }
                     }
                 }
 
                 LaunchedEffect(Unit) {
-                    hasMailAccessToken = AppContainer.checkMailAccessTokenUseCase()
+                    hasMailAccessToken = checkMailAccessTokenUseCase()
 
-                    AppContainer.getMyProfileUseCase()
+                    getMyProfileUseCase()
                         .onSuccess { profile ->
                             myProfile = profile
                             if (settingsEmail == "your.email@example.com") {
@@ -197,6 +288,19 @@ class MainActivity : ComponentActivity() {
                         }
                         .onFailure { error ->
                             Log.e(TAG, "Failed to load my profile", error)
+                        }
+
+                    getSettingsUseCase()
+                        .onSuccess { settings ->
+                            hasMailAccessToken = settings.hasMailAccessToken
+                            settingsLanguage = settings.language
+                            smtpHost = settings.smtpHost.orEmpty()
+                            smtpPort = settings.smtpPort?.toString().orEmpty()
+                            imapHost = settings.imapHost.orEmpty()
+                            imapPort = settings.imapPort?.toString().orEmpty()
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Failed to load settings", error)
                         }
                 }
 
@@ -207,50 +311,87 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(selectedChat?.id) {
                     val chatId = selectedChat?.id ?: return@LaunchedEffect
                     messages = emptyList()
+                    getMessagesUseCase(chatId)
+                        .onFailure { error ->
+                            Log.e(TAG, "Failed to load messages", error)
+                        }
 
-                    AppContainer.observeDomainMessagesUseCase(chatId).collect { loadedMessages ->
+                    observeMessagesUseCase(chatId).collect { loadedMessages ->
                         messages = loadedMessages.map { message -> message.toMessageUi() }
+                    }
+                }
+
+                fun refreshChats() {
+                    if (isRefreshingChats) return
+
+                    Log.d(TAG, "Manual chats refresh requested")
+                    isRefreshingChats = true
+                    scope.launch {
+                        try {
+                            getChatsUseCase()
+                                .onFailure { error ->
+                                    Log.e(TAG, "Manual chats refresh failed", error)
+                                }
+                        } finally {
+                            isRefreshingChats = false
+                        }
                     }
                 }
 
                 AnimatedContent(
                     targetState = currentScreen,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF030306)),
                     transitionSpec = {
-                        val direction = if (targetState.animationOrder >= initialState.animationOrder) {
-                            1
-                        } else {
-                            -1
-                        }
-
-                        (
-                            slideInHorizontally(
-                                animationSpec = tween(durationMillis = 260),
-                                initialOffsetX = { fullWidth -> fullWidth / 4 * direction },
-                            ) + fadeIn(animationSpec = tween(durationMillis = 220)) +
-                                scaleIn(
-                                    initialScale = 0.98f,
-                                    animationSpec = tween(durationMillis = 260),
-                                )
-                            ).togetherWith(
-                                slideOutHorizontally(
-                                    animationSpec = tween(durationMillis = 220),
-                                    targetOffsetX = { fullWidth -> -fullWidth / 5 * direction },
-                                ) + fadeOut(animationSpec = tween(durationMillis = 180)) +
-                                    scaleOut(
-                                        targetScale = 0.98f,
-                                        animationSpec = tween(durationMillis = 220),
-                                    )
+                        val enterTransition = scaleIn(
+                            initialScale = 0.94f,
+                            animationSpec = tween(
+                                durationMillis = ScreenEnterDurationMillis,
+                                easing = ScreenEnterEasing,
+                            ),
+                        ) + fadeIn(
+                            initialAlpha = 0.28f,
+                            animationSpec = tween(
+                                durationMillis = ScreenEnterDurationMillis,
+                                easing = ScreenEnterEasing,
+                            ),
+                        )
+                        val exitTransition = scaleOut(
+                            targetScale = 1.04f,
+                            animationSpec = tween(
+                                durationMillis = ScreenExitDurationMillis,
+                                easing = ScreenExitEasing,
+                            ),
+                        ) + fadeOut(
+                            animationSpec = tween(
+                                durationMillis = ScreenExitDurationMillis,
+                                easing = ScreenExitEasing,
                             )
+                        )
+
+                        enterTransition.togetherWith(exitTransition)
                     },
                     label = "posterScreenTransition",
                 ) { screen ->
                 when (screen) {
                     AppScreen.SIGN_IN -> {
                         SignInScreen(
-                            onSignInClick = { email, _ ->
+                            onSignInClick = { email, password ->
                                 Log.d(TAG, "Sign In clicked: email=$email")
-                                Log.d(TAG, "Placeholder sign in success, opening chats")
-                                currentScreen = AppScreen.CHATS
+                                scope.launch {
+                                    signInUseCase(email, password)
+                                        .onSuccess {
+                                            getChatsUseCase()
+                                            getMyProfileUseCase()
+                                                .onSuccess { profile -> myProfile = profile }
+                                            hasMailAccessToken = checkMailAccessTokenUseCase()
+                                            currentScreen = AppScreen.CHATS
+                                        }
+                                        .onFailure { error ->
+                                            Log.e(TAG, "Sign in failed", error)
+                                        }
+                                }
                             },
                             onSignUpClick = {
                                 Log.d(TAG, "Navigate to Sign Up")
@@ -261,11 +402,19 @@ class MainActivity : ComponentActivity() {
 
                     AppScreen.SIGN_UP -> {
                         RegisterScreen(
-                            onContinueClick = { name, email, _ ->
+                            onContinueClick = { name, email, password ->
                                 Log.d(TAG, "Sign Up clicked: name=$name, email=$email")
-                                verificationEmail = email.ifBlank { "user@mail.ru" }
-                                Log.d(TAG, "Opening VerifyEmailScreen for $verificationEmail")
-                                currentScreen = AppScreen.VERIFY_EMAIL
+                                scope.launch {
+                                    signUpUseCase(name, email, password)
+                                        .onSuccess {
+                                            verificationEmail = email
+                                            Log.d(TAG, "Opening VerifyEmailScreen for $verificationEmail")
+                                            currentScreen = AppScreen.VERIFY_EMAIL
+                                        }
+                                        .onFailure { error ->
+                                            Log.e(TAG, "Sign up failed", error)
+                                        }
+                                }
                             },
                             onSignInClick = {
                                 Log.d(TAG, "Navigate to Sign In")
@@ -278,12 +427,29 @@ class MainActivity : ComponentActivity() {
                         VerifyEmailScreen(
                             email = verificationEmail,
                             onVerifyClick = { code ->
-                                Log.d(TAG, "Verify code clicked: code=$code")
-                                Log.d(TAG, "Placeholder verification success, opening chats")
-                                currentScreen = AppScreen.CHATS
+                                Log.d(TAG, "Verify code clicked: codeLength=${code.length}")
+                                scope.launch {
+                                    verifyOtpUseCase(verificationEmail, code)
+                                        .onSuccess {
+                                            getChatsUseCase()
+                                            getMyProfileUseCase()
+                                                .onSuccess { profile -> myProfile = profile }
+                                            hasMailAccessToken = checkMailAccessTokenUseCase()
+                                            currentScreen = AppScreen.CHATS
+                                        }
+                                        .onFailure { error ->
+                                            Log.e(TAG, "OTP verification failed", error)
+                                        }
+                                }
                             },
                             onResendClick = {
                                 Log.d(TAG, "Resend code clicked for $verificationEmail")
+                                scope.launch {
+                                    authRepository.resendOtp(verificationEmail)
+                                        .onFailure { error ->
+                                            Log.e(TAG, "Resend OTP failed", error)
+                                        }
+                                }
                             },
                         )
                     }
@@ -294,6 +460,7 @@ class MainActivity : ComponentActivity() {
                             isSetupRequired = !hasMailAccessToken,
                             profileAvatarUrl = myProfile?.avatarUrl,
                             hasMailAccessToken = hasMailAccessToken,
+                            isRefreshingChats = isRefreshingChats,
                             onChatClick = { chat ->
                                 if (hasMailAccessToken) {
                                     Log.d(TAG, "Chat clicked: id=${chat.id}, name=${chat.name}")
@@ -303,6 +470,7 @@ class MainActivity : ComponentActivity() {
                                     Log.d(TAG, "Chat blocked, mail access token is missing")
                                 }
                             },
+                            onRefreshChatsClick = ::refreshChats,
                             onSetupTokenClick = {
                                 Log.d(TAG, "Setup token clicked")
                                 accessTokenBackScreen = AppScreen.CHATS
@@ -356,46 +524,14 @@ class MainActivity : ComponentActivity() {
                                 Log.d(TAG, "Profile photo clicked")
                                 avatarPickerLauncher.launch(arrayOf("image/*"))
                             },
-                            onAccountItemClick = { itemId ->
-                                Log.d(TAG, "Account item clicked: $itemId")
-                                EditableSetting.fromId(itemId)?.let { editableSetting ->
-                                    currentEditableSetting = editableSetting
-                                    currentScreen = AppScreen.SETTINGS_TEXT_EDIT
-                                }
-                            },
-                        )
-                    }
-
-                    AppScreen.SETTINGS_TEXT_EDIT -> {
-                        val profile = myProfile
-                        val editableSetting = currentEditableSetting
-
-                        SettingsTextEditScreen(
-                            title = editableSetting.title,
-                            label = editableSetting.title,
-                            value = when (editableSetting) {
-                                EditableSetting.NAME -> profile?.name ?: "Your Name"
-                                EditableSetting.USERNAME -> profile?.username ?: "@your.username"
-                                EditableSetting.EMAIL -> settingsEmail
-                                EditableSetting.BIRTHDAY -> settingsBirthday
-                                EditableSetting.BIO -> profile?.bio ?: "Hey there! I'm using Poster."
-                            },
-                            placeholder = editableSetting.placeholder,
-                            singleLine = editableSetting != EditableSetting.BIO,
-                            allowEmpty = editableSetting == EditableSetting.BIO,
-                            keyboardType = editableSetting.keyboardType,
-                            onBackClick = {
-                                currentScreen = AppScreen.SETTINGS
-                            },
-                            onSaveClick = { value ->
-                                Log.d(TAG, "Save setting ${editableSetting.id}: $value")
-                                when (editableSetting) {
+                            onAccountValueSave = { itemId, value ->
+                                Log.d(TAG, "Save setting $itemId inline: $value")
+                                when (EditableSetting.fromId(itemId)) {
                                     EditableSetting.NAME -> {
                                         scope.launch {
-                                            AppContainer.updateNameUseCase(value)
+                                            updateNameUseCase(value)
                                                 .onSuccess { updatedProfile ->
                                                     myProfile = updatedProfile
-                                                    currentScreen = AppScreen.SETTINGS
                                                 }
                                                 .onFailure { error ->
                                                     Log.e(TAG, "Failed to update name", error)
@@ -406,10 +542,9 @@ class MainActivity : ComponentActivity() {
                                     EditableSetting.USERNAME -> {
                                         val username = value.withUsernamePrefix()
                                         scope.launch {
-                                            AppContainer.updateUsernameUseCase(username)
+                                            updateUsernameUseCase(username)
                                                 .onSuccess { updatedProfile ->
                                                     myProfile = updatedProfile
-                                                    currentScreen = AppScreen.SETTINGS
                                                 }
                                                 .onFailure { error ->
                                                     Log.e(TAG, "Failed to update username", error)
@@ -419,26 +554,25 @@ class MainActivity : ComponentActivity() {
 
                                     EditableSetting.EMAIL -> {
                                         settingsEmail = value
-                                        currentScreen = AppScreen.SETTINGS
                                     }
 
                                     EditableSetting.BIRTHDAY -> {
                                         settingsBirthday = value
-                                        currentScreen = AppScreen.SETTINGS
                                     }
 
                                     EditableSetting.BIO -> {
                                         scope.launch {
-                                            AppContainer.updateBioUseCase(value)
+                                            updateBioUseCase(value)
                                                 .onSuccess { updatedProfile ->
                                                     myProfile = updatedProfile
-                                                    currentScreen = AppScreen.SETTINGS
                                                 }
                                                 .onFailure { error ->
                                                     Log.e(TAG, "Failed to update bio", error)
                                                 }
                                         }
                                     }
+
+                                    null -> Unit
                                 }
                             },
                         )
@@ -454,7 +588,7 @@ class MainActivity : ComponentActivity() {
                                 Log.d(TAG, "Language saved: $language")
                                 settingsLanguage = language
                                 scope.launch {
-                                    AppContainer.settingsRepository.changeLanguage(language)
+                                    settingsRepository.changeLanguage(language)
                                         .onFailure { error ->
                                             Log.e(TAG, "Failed to save language", error)
                                         }
@@ -503,7 +637,7 @@ class MainActivity : ComponentActivity() {
                             onNameChange = { name ->
                                 Log.d(TAG, "Name changed placeholder: $name")
                                 scope.launch {
-                                    AppContainer.updateNameUseCase(name)
+                                    updateNameUseCase(name)
                                         .onSuccess { updatedProfile ->
                                             myProfile = updatedProfile
                                         }
@@ -515,7 +649,7 @@ class MainActivity : ComponentActivity() {
                             onUsernameChange = { username ->
                                 Log.d(TAG, "Username changed placeholder: $username")
                                 scope.launch {
-                                    AppContainer.updateUsernameUseCase(username)
+                                    updateUsernameUseCase(username)
                                         .onSuccess { updatedProfile ->
                                             myProfile = updatedProfile
                                         }
@@ -527,7 +661,7 @@ class MainActivity : ComponentActivity() {
                             onBioChange = { bio ->
                                 Log.d(TAG, "Bio changed placeholder, length=${bio.length}")
                                 scope.launch {
-                                    AppContainer.updateBioUseCase(bio)
+                                    updateBioUseCase(bio)
                                         .onSuccess { updatedProfile ->
                                             myProfile = updatedProfile
                                         }
@@ -542,16 +676,24 @@ class MainActivity : ComponentActivity() {
                     AppScreen.ACCESS_TOKEN_SETTINGS -> {
                         AccessTokenSettingsScreen(
                             initialToken = "",
+                            initialSmtpHost = smtpHost,
+                            initialSmtpPort = smtpPort,
+                            initialImapHost = imapHost,
+                            initialImapPort = imapPort,
                             onBackClick = {
                                 Log.d(TAG, "Back from AccessTokenSettings")
                                 currentScreen = accessTokenBackScreen
                             },
-                            onSaveTokenClick = { token ->
-                                Log.d(TAG, "Access token save requested, length=${token.length}")
+                            onSaveTokenClick = { mailSettings ->
+                                Log.d(TAG, "Access token save requested, length=${mailSettings.token.length}")
                                 scope.launch {
-                                    AppContainer.saveMailAccessTokenUseCase(token)
+                                    saveMailAccessTokenUseCase(mailSettings)
                                         .onSuccess {
                                             hasMailAccessToken = true
+                                            smtpHost = mailSettings.smtpHost.orEmpty()
+                                            smtpPort = mailSettings.smtpPort?.toString().orEmpty()
+                                            imapHost = mailSettings.imapHost.orEmpty()
+                                            imapPort = mailSettings.imapPort?.toString().orEmpty()
                                             currentScreen = accessTokenBackScreen
                                         }
                                         .onFailure { error ->
@@ -600,9 +742,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSendClick = { text ->
                                     if (hasMailAccessToken) {
-                                        Log.d(TAG, "Send message: $text")
+                                        Log.d(TAG, "Send message requested: textLength=${text.length}")
                                         scope.launch {
-                                            AppContainer.sendDomainMessageUseCase(chat.id, text)
+                                            sendMessageUseCase(chat.id, text)
                                                 .onFailure { error ->
                                                     Log.e(TAG, "Failed to send message", error)
                                                 }
@@ -621,7 +763,7 @@ class MainActivity : ComponentActivity() {
                                             fallbackMimeType = "application/pdf",
                                         )
 
-                                        AppContainer.sendMessageWithAttachmentsUseCase(
+                                        sendMessageWithAttachmentsUseCase(
                                             chatId = chat.id,
                                             text = "",
                                             attachments = listOf(attachment),
@@ -640,7 +782,7 @@ class MainActivity : ComponentActivity() {
                                             fallbackMimeType = "image/jpeg",
                                         )
 
-                                        AppContainer.sendMessageWithAttachmentsUseCase(
+                                        sendMessageWithAttachmentsUseCase(
                                             chatId = chat.id,
                                             text = "",
                                             attachments = listOf(attachment),
@@ -714,7 +856,6 @@ private enum class AppScreen {
     VERIFY_EMAIL,
     CHATS,
     SETTINGS,
-    SETTINGS_TEXT_EDIT,
     LANGUAGE_SETTINGS,
     PRIVACY_SETTINGS,
     MY_PROFILE,
@@ -724,54 +865,29 @@ private enum class AppScreen {
     PROFILE,
 }
 
-private val AppScreen.animationOrder: Int
-    get() = when (this) {
-        AppScreen.SIGN_IN -> 0
-        AppScreen.SIGN_UP -> 1
-        AppScreen.VERIFY_EMAIL -> 2
-        AppScreen.CHATS -> 3
-        AppScreen.SETTINGS -> 4
-        AppScreen.SETTINGS_TEXT_EDIT -> 5
-        AppScreen.LANGUAGE_SETTINGS -> 5
-        AppScreen.PRIVACY_SETTINGS -> 5
-        AppScreen.MY_PROFILE -> 5
-        AppScreen.ACCESS_TOKEN_SETTINGS -> 5
-        AppScreen.ACCESS_TOKEN_HELP -> 6
-        AppScreen.MESSAGES -> 7
-        AppScreen.PROFILE -> 8
-    }
+private const val ScreenEnterDurationMillis = 360
+private const val ScreenExitDurationMillis = 280
+
+private val ScreenEnterEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+private val ScreenExitEasing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
 
 private enum class EditableSetting(
     val id: String,
-    val title: String,
-    val placeholder: String,
-    val keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     NAME(
         id = "name",
-        title = "Name",
-        placeholder = "Enter your name",
     ),
     USERNAME(
         id = "username",
-        title = "Username",
-        placeholder = "Enter your username",
     ),
     EMAIL(
         id = "email",
-        title = "Email",
-        placeholder = "Enter your email",
-        keyboardType = KeyboardType.Email,
     ),
     BIRTHDAY(
         id = "birthday",
-        title = "Birthday",
-        placeholder = "Enter your birthday",
     ),
     BIO(
         id = "bio",
-        title = "Bio",
-        placeholder = "Tell people about yourself",
     );
 
     companion object {

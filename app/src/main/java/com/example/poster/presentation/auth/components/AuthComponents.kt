@@ -1,9 +1,9 @@
 package com.example.poster.presentation.auth.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,9 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -62,6 +60,8 @@ val PosterTextPrimary = Color(0xFFF6F6FF)
 val PosterTextSecondary = Color(0xFFA2A3B8)
 val PosterTextMuted = Color(0xFF7B7D92)
 val PosterIcon = Color(0xFF7F8BFF)
+
+private val AuthMotionEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 @Composable
 fun PosterAuthBackground(
@@ -261,13 +261,36 @@ fun PosterOtpCell(
     isActive: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val scale = remember { Animatable(1f) }
+    val cellScale by animateFloatAsState(
+        targetValue = when {
+            isActive -> 1.025f
+            value.isNotEmpty() -> 1.015f
+            else -> 1f
+        },
+        animationSpec = tween(
+            durationMillis = 220,
+            easing = AuthMotionEasing,
+        ),
+        label = "otpCellScale",
+    )
+    val cellElevation by animateDpAsState(
+        targetValue = if (isActive || value.isNotEmpty()) 18.dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = 240,
+            easing = AuthMotionEasing,
+        ),
+        label = "otpCellElevation",
+    )
     val borderColor by animateColorAsState(
         targetValue = when {
             isActive -> PosterPrimary
             value.isNotEmpty() -> PosterPrimary.copy(alpha = 0.72f)
             else -> PosterStroke
         },
+        animationSpec = tween(
+            durationMillis = 220,
+            easing = AuthMotionEasing,
+        ),
         label = "otpBorderColor",
     )
     val glowColor by animateColorAsState(
@@ -276,37 +299,21 @@ fun PosterOtpCell(
             value.isNotEmpty() -> PosterPrimary.copy(alpha = 0.18f)
             else -> Color.Transparent
         },
+        animationSpec = tween(
+            durationMillis = 240,
+            easing = AuthMotionEasing,
+        ),
         label = "otpGlowColor",
     )
-
-    LaunchedEffect(value) {
-        if (value.isEmpty()) {
-            scale.snapTo(1f)
-            return@LaunchedEffect
-        }
-
-        scale.snapTo(0.9f)
-        scale.animateTo(
-            targetValue = 1.08f,
-            animationSpec = tween(durationMillis = 110),
-        )
-        scale.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-            ),
-        )
-    }
 
     Box(
         modifier = modifier
             .shadow(
-                elevation = if (isActive || value.isNotEmpty()) 18.dp else 0.dp,
+                elevation = cellElevation,
                 shape = RoundedCornerShape(13.dp),
                 spotColor = glowColor,
             )
-            .scale(scale.value)
+            .scale(cellScale)
             .background(
                 color = PosterSurface,
                 shape = RoundedCornerShape(13.dp),

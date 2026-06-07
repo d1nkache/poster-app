@@ -1,30 +1,33 @@
 package com.example.poster.data.remote.dto.message
 
 data class MessageDto(
-    val id: String,
-    val chatId: String,
-    val senderId: String,
-    val text: String?,
-    val createdAt: String,
-    val isMine: Boolean,
+    val id: Long,
+    val chatId: Long,
+    val bodyText: String,
+    val direction: String,
     val status: String,
-    val attachments: List<AttachmentDto> = emptyList(),
+    val isRead: Boolean,
+    val createdAt: String,
+    val sentAt: String?,
+    val receivedAt: String?,
+    val attachments: List<MessageAttachmentDto> = emptyList(),
 )
 
 data class SendMessageRequestDto(
-    val text: String,
-    val attachmentIds: List<String> = emptyList(),
+    val bodyText: String,
 )
 
 data class MessageListResponseDto(
-    val messages: List<MessageDto>,
+    val items: List<MessageDto>,
 )
 
-data class AttachmentDto(
-    val id: String,
-    val fileName: String,
-    val mimeType: String,
-    val sizeBytes: Long,
+data class MessageAttachmentDto(
+    val id: Long,
     val url: String,
-    val type: String,
+    val fileName: String?,
+    val contentType: String,
+    val sizeBytes: Long,
+    val createdAt: String,
 )
+
+typealias AttachmentDto = MessageAttachmentDto

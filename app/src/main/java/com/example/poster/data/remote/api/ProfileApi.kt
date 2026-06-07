@@ -8,5 +8,5 @@ interface ProfileApi {
     suspend fun getMyProfile(): ProfileDto
     suspend fun updateMyProfile(request: UpdateProfileRequestDto): ProfileDto
     suspend fun getProfile(userId: String): ProfileDto
-    suspend fun uploadAvatar(uri: String): UploadAvatarResponseDto
+    suspend fun uploadAvatar(avatarPng: ByteArray): UploadAvatarResponseDto
 }

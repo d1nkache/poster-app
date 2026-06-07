@@ -8,4 +8,8 @@ data class UserSettings(
     val bio: String,
     val language: String,
     val hasMailAccessToken: Boolean,
+    val smtpHost: String? = null,
+    val smtpPort: Int? = null,
+    val imapHost: String? = null,
+    val imapPort: Int? = null,
 )

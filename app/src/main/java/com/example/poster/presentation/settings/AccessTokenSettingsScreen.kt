@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.HelpOutline
@@ -37,11 +39,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.poster.domain.model.MailAccessSettings
 
 private val PosterBackground = Color(0xFF030306)
 private val PosterTopBar = Color(0xFF101014)
@@ -58,14 +62,25 @@ private val PosterDivider = Color(0xFF1B1A25)
 @Composable
 fun AccessTokenSettingsScreen(
     initialToken: String = "",
+    initialSmtpHost: String = "",
+    initialSmtpPort: String = "",
+    initialImapHost: String = "",
+    initialImapPort: String = "",
     onBackClick: () -> Unit,
-    onSaveTokenClick: (String) -> Unit,
+    onSaveTokenClick: (MailAccessSettings) -> Unit,
     onHowToGetTokenClick: () -> Unit,
 ) {
     var token by remember { mutableStateOf(initialToken) }
+    var smtpHost by remember { mutableStateOf(initialSmtpHost) }
+    var smtpPort by remember { mutableStateOf(initialSmtpPort) }
+    var imapHost by remember { mutableStateOf(initialImapHost) }
+    var imapPort by remember { mutableStateOf(initialImapPort) }
     var isTokenVisible by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
-    val canSave = token.trim().isNotEmpty()
+    val canSave = token.trim().isNotEmpty() &&
+        smtpPort.isBlankOrValidPort() &&
+        imapPort.isBlankOrValidPort()
 
     Column(
         modifier = Modifier
@@ -88,6 +103,7 @@ fun AccessTokenSettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 23.dp),
         ) {
             Spacer(modifier = Modifier.height(24.dp))
@@ -116,6 +132,53 @@ fun AccessTokenSettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
+            Text(
+                text = "Mail Server Settings",
+                color = PosterTextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            MailConfigInput(
+                label = "SMTP Host",
+                value = smtpHost,
+                onValueChange = { smtpHost = it },
+                placeholder = "smtp.example.com",
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            MailConfigInput(
+                label = "SMTP Port",
+                value = smtpPort,
+                onValueChange = { smtpPort = it.filter(Char::isDigit).take(5) },
+                placeholder = "587",
+                keyboardType = KeyboardType.Number,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            MailConfigInput(
+                label = "IMAP Host",
+                value = imapHost,
+                onValueChange = { imapHost = it },
+                placeholder = "imap.example.com",
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            MailConfigInput(
+                label = "IMAP Port",
+                value = imapPort,
+                onValueChange = { imapPort = it.filter(Char::isDigit).take(5) },
+                placeholder = "993",
+                keyboardType = KeyboardType.Number,
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
             HowToGetTokenButton(
                 onClick = onHowToGetTokenClick,
             )
@@ -125,7 +188,15 @@ fun AccessTokenSettingsScreen(
             SaveTokenButton(
                 enabled = canSave,
                 onClick = {
-                    onSaveTokenClick(token.trim())
+                    onSaveTokenClick(
+                        MailAccessSettings(
+                            token = token.trim(),
+                            smtpHost = smtpHost.trim().ifBlank { null },
+                            smtpPort = smtpPort.toIntOrNull(),
+                            imapHost = imapHost.trim().ifBlank { null },
+                            imapPort = imapPort.toIntOrNull(),
+                        )
+                    )
                 },
             )
 
@@ -138,6 +209,65 @@ fun AccessTokenSettingsScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
+    }
+}
+
+@Composable
+private fun MailConfigInput(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+) {
+    Column {
+        Text(
+            text = label,
+            color = PosterTextSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            cursorBrush = SolidColor(PosterPrimary),
+            textStyle = TextStyle(
+                color = PosterTextPrimary,
+                fontSize = 14.sp,
+            ),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .background(
+                            color = PosterSurface,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(13.dp),
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = PosterStroke.copy(alpha = 0.7f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(13.dp),
+                        )
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            color = PosterTextMuted,
+                            fontSize = 14.sp,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
     }
 }
 
@@ -373,12 +503,16 @@ private fun SaveTokenButton(
     }
 }
 
+private fun String.isBlankOrValidPort(): Boolean {
+    return isBlank() || toIntOrNull()?.let { it in 1..65535 } == true
+}
+
 @Preview(showBackground = true, widthDp = 393, heightDp = 852)
 @Composable
 private fun AccessTokenSettingsScreenPreview() {
     AccessTokenSettingsScreen(
         onBackClick = {},
-        onSaveTokenClick = {},
+        onSaveTokenClick = { _ -> },
         onHowToGetTokenClick = {},
     )
 }

@@ -6,9 +6,13 @@ data class SignInRequestDto(
 )
 
 data class SignUpRequestDto(
-    val name: String,
     val email: String,
     val password: String,
+    val displayName: String? = null,
+)
+
+data class RegisterResponseDto(
+    val message: String,
 )
 
 data class VerifyOtpRequestDto(
@@ -16,10 +20,14 @@ data class VerifyOtpRequestDto(
     val code: String,
 )
 
+data class RefreshRequestDto(
+    val refreshToken: String,
+)
+
 data class AuthResponseDto(
     val accessToken: String,
     val refreshToken: String,
-    val user: UserDto,
+    val profile: UserDto,
 )
 
 data class UserDto(
@@ -27,4 +35,8 @@ data class UserDto(
     val name: String,
     val username: String,
     val email: String,
+    val birthday: String? = null,
+    val bio: String? = null,
+    val avatarUrl: String? = null,
+    val isOnline: Boolean = false,
 )
